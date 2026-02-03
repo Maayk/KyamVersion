@@ -6,9 +6,17 @@
     "mandatory": false
   },
   "hytale": {
-    "version": "18.01.2025",
-    "url": "https://cdn.battlylauncher.com/hytale/18.01.2025/Hytale.zip",
-    "notes": "Initial version of Hytale for Battly Launcher users.",
-    "mandatory": true
+    "latest": {
+      "version": "17.01.2026",
+      "url": "https://cdn.battlylauncher.com/hytale/18.01.2025/Hytale.zip",
+      "notes": "Initial version of Hytale for Battly Launcher users.",
+      "mandatory": true
+    },
+    "beta": {
+      "version": "28.01.2026",
+      "url": "https://github.com/Maayk/KyamVersion/releases/download/Client/HytaleUpdated.zip",
+      "notes": "Initial version of Hytale for Battly Launcher users.",
+      "mandatory": true
+    }
   }
 }

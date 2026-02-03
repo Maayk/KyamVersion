@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Battly Launcher 4 Hytale</title>
+    <title>Kyam Launcher v1.0.0</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,25 +13,23 @@
 <body>
     <div class="title-bar">
         <div class="title-drag-area">
-            <span class="app-title" data-i18n="app_title">BATTLY LAUNCHER 4 HYTALE</span>
+            <span class="app-title" data-i18n="app_title">KYAMTALE LAUNCHER</span>
         </div>
-        <div class="language-selector">
-            <button id="discordBtn" class="discord-btn" title="Discord">
-                <i class="fab fa-discord"></i>
-            </button>
-            <select id="languageSelect" class="lang-dropdown">
-                <option value="en">🇺🇸 EN</option>
-                <option value="es">🇪🇸 ES</option>
-                <option value="zh">🇨🇳 ZH</option>
-                <option value="de">🇩🇪 DE</option>
-                <option value="fr">🇫🇷 FR</option>
-                <option value="pt">🇧🇷 PT</option>
-                <option value="ru">🇷🇺 RU</option>
-                <option value="ja">🇯🇵 JA</option>
-            </select>
+
+        <div class="user-section-header">
+            <div class="input-container-header">
+                <i class="fas fa-user input-icon-header"></i>
+                <input type="text" id="username" placeholder="Player" data-i18n-placeholder="placeholder_username"
+                    autocomplete="off" spellcheck="false" class="header-input">
+                <button id="confirmNameBtn" class="confirm-name-btn header-confirm" title="Confirmar nome">
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
         </div>
+
         <div class="window-controls">
-            <button id="settingsBtn" class="control-btn" title="Configuración"><i class="fas fa-cog"></i></button>
+            <button id="modsBtn" class="control-btn" title="Mods"><i class="fas fa-puzzle-piece"></i></button>
+            <button id="settingsBtn" class="control-btn" title="Configuração"><i class="fas fa-cog"></i></button>
             <button id="minBtn" class="control-btn" title="Minimizar"><i class="fas fa-minus"></i></button>
             <button id="closeBtn" class="control-btn close" title="Cerrar"><i class="fas fa-times"></i></button>
         </div>
@@ -43,8 +41,8 @@
             <h2 data-i18n="settings_title">Configuración</h2>
 
             <div class="settings-tabs">
-                <button class="settings-tab active" data-tab="general">General</button>
-                <button class="settings-tab" data-tab="java">Java Update</button>
+                <button class="settings-tab active" data-tab="general" data-i18n="settings_tab_general">Geral</button>
+                <button class="settings-tab" data-tab="java" data-i18n="settings_tab_java">Java Update</button>
             </div>
 
             <div id="settings-general" class="settings-page active">
@@ -57,7 +55,7 @@
 
                 <div class="settings-option">
                     <div style="display:flex; align-items:center; gap: 10px;">
-                        <i class="fas fa-folder-open" style="color: #a855f7; font-size: 1.2rem;"></i>
+                        <i class="fas fa-folder-open" style="color: #6a6a6a; font-size: 1.2rem;"></i>
                         <div>
                             <span class="setting-label" style="display:block;" data-i18n="btn_open_location">Open Game
                                 Location</span>
@@ -71,7 +69,7 @@
 
                 <div class="settings-option">
                     <div style="display:flex; align-items:center; gap: 10px;">
-                        <i class="fas fa-tools" style="color: #a855f7; font-size: 1.2rem;"></i>
+                        <i class="fas fa-tools" style="color: #6a6a6a; font-size: 1.2rem;"></i>
                         <div>
                             <span class="setting-label" style="display:block;" data-i18n="setting_repair">Reparar
                                 Juego</span>
@@ -91,9 +89,7 @@
                             <button class="gpu-btn" data-val="dedicated">DEDICATED</button>
                         </div>
                     </div>
-                    <div style="color: #a855f7; font-size: 0.8rem; margin-top: 5px;">
-                        <i class="fas fa-info-circle"></i> <span id="gpuDetectedText">Detecting...</span>
-                    </div>
+
                 </div>
 
                 <div class="settings-option" style="margin-top: 20px;">
@@ -108,7 +104,7 @@
 
             <div id="settings-java" class="settings-page" style="display: none;">
                 <h3 style="display:flex; align-items:center; gap: 10px; color: #fff; margin-bottom: 20px;">
-                    <i class="fas fa-coffee" style="color: #a855f7;"></i> <span data-i18n="setting_java">Java
+                    <i class="fas fa-coffee" style="color: #6a6a6a;"></i> <span data-i18n="setting_java">Java
                         Runtime</span>
                 </h3>
 
@@ -128,32 +124,30 @@
                         Executable Path</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="javaPathInput" class="simple-input" placeholder="Select Java path...">
-                        <button id="browseJavaBtn" class="action-btn primary-btn small-btn" style="background: #a855f7;"
+                        <button id="browseJavaBtn" class="action-btn primary-btn small-btn" style="background: #4a4a4a;"
                             data-i18n="btn_browse">Browse</button>
                     </div>
-                    <div style="color: #a855f7; font-size: 0.8rem; margin-top: 10px;">
-                        <i class="fas fa-info-circle"></i> <span data-i18n="java_path_desc">Select installation
-                            folder</span>
-                    </div>
+
                 </div>
             </div>
 
             <div id="settings-profiles" class="settings-page" style="display: none;">
                 <div class="settings-option" style="flex-direction: column; align-items: flex-start;">
-                    <span class="setting-label">Active Profile</span>
+                    <span class="setting-label" data-i18n="settings_profile_active">Perfil Ativo</span>
                     <select id="profileSelect" class="settings-select" style="width: 100%; margin-top: 10px;">
-                        <option value="default">Default</option>
+                        <option value="default" data-i18n="settings_profile_default">Padrão</option>
                     </select>
                 </div>
                 <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <button id="createProfileBtn" class="action-btn primary-btn small-btn" style="flex: 1;">+
-                        New</button>
-                    <button id="deleteProfileBtn" class="action-btn secondary-btn small-btn"
-                        style="flex: 1;">Delete</button>
+                    <button id="createProfileBtn" class="action-btn primary-btn small-btn" style="flex: 1;"
+                        data-i18n="settings_profile_new">+ Novo</button>
+                    <button id="deleteProfileBtn" class="action-btn secondary-btn small-btn" style="flex: 1;"
+                        data-i18n="settings_profile_delete">Excluir</button>
                 </div>
                 <div class="input-group" style="margin-top: 20px;">
-                    <label>Profile Name</label>
-                    <input type="text" id="profileNameInput" class="simple-input" placeholder="My Profile">
+                    <label data-i18n="settings_profile_name">Nome do Perfil</label>
+                    <input type="text" id="profileNameInput" class="simple-input" placeholder="Meu Perfil"
+                        data-i18n-placeholder="settings_profile_placeholder">
                 </div>
             </div>
 
@@ -167,8 +161,8 @@
             </div>
 
             <div id="onboardingStep1" class="onboarding-slide active">
-                <h1 data-i18n="welcome_title" class="fade-in-up">Welcome to Battly</h1>
-                <p data-i18n="welcome_subtitle" class="fade-in-up delay-1">Your adventure starts here</p>
+                <h1 data-i18n="welcome_title" class="fade-in-up">Bem Vindo ao KyamTale</h1>
+                <p data-i18n="welcome_subtitle" class="fade-in-up delay-1">Sua aventura começa aqui</p>
 
                 <div class="onboarding-step step-lang fade-in-up delay-2">
                     <div class="lang-cards">
@@ -217,8 +211,6 @@
                         placeholder="Player" data-i18n-placeholder="placeholder_player">
                 </div>
                 <div class="step-nav">
-                    <button class="onboarding-btn secondary back-step-btn" data-prev="onboardingStep1"
-                        data-i18n="btn_back">Back</button>
                     <button id="btnToStep3" class="onboarding-btn next-step-btn" disabled data-next="onboardingStep3"
                         data-i18n="btn_next">Next</button>
                 </div>
@@ -251,13 +243,66 @@
 
     <div class="content-area">
         <div id="homeView" class="view active">
-            <div class="home-header">
-                <h1 class="big-logo">HYTALE</h1>
-                <p class="support-msg" data-i18n="support_msg">We support the Hytale team...</p>
+            <!-- Hero Full-Bleed: Ocupa toda a área -->
+            <div class="hero-fullbleed" id="heroSection">
+                <div class="hero-bg" id="heroImage"></div>
+                <div class="hero-gradient"></div>
+
+                <!-- Logo e info no hero -->
+                <div class="hero-main-content">
+                    <div class="hero-branding">
+                        <h1 class="hero-logo">HYTALE</h1>
+                        <p class="hero-tagline" id="heroDescription">Sua aventura começa aqui</p>
+                    </div>
+
+                    <div class="hero-featured">
+                        <!-- <span class="featured-label">EM DESTAQUE</span> -->
+                        <h2 class="featured-title" id="heroTitle">Carregando...</h2>
+                        <div class="featured-actions">
+                            <button class="action-pill" id="heroReadMore">
+                                <i class="fas fa-external-link-alt"></i>
+                                VER MAIS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress dots no lado direito -->
+                <div class="hero-nav">
+                    <div class="nav-dots" id="navDots"></div>
+                </div>
+
+                <!-- Activity Log / Histórico de Sessão -->
+                <div id="activityLog" class="activity-log-container">
+                    <!-- Itens serão adicionados via JS -->
+                </div>
+
+                <!-- Botão Jogar movido para o Hero -->
+                <div class="hero-play-container">
+                    <div class="hero-channel-bar">
+                        <div class="channel-info">
+                            <span class="channel-label" data-i18n="home_channel_label">Canal</span>
+                            <select id="homeGameChannel" class="home-channel-select">
+                                <option value="latest" data-i18n="game_channel_latest">Latest</option>
+                                <option value="beta" data-i18n="game_channel_beta">Beta</option>
+                            </select>
+                        </div>
+                        <div class="channel-version">
+                            <span class="channel-version-label" data-i18n="home_version_label">Versão</span>
+                            <span id="homeGameVersion" class="channel-version-value">-</span>
+                        </div>
+                    </div>
+                    <button id="playBtn" class="bar-btn primary large-play-btn" data-i18n="play_btn">JOGAR</button>
+                </div>
             </div>
-            <div id="newsContainer" class="news-grid">
-                <div class="loader-container">
-                    <i class="fas fa-circle-notch fa-spin"></i>
+
+            <!-- News Cards na parte inferior - fora do hero -->
+            <div class="news-section">
+                <span class="section-title">MAIS NOTÍCIAS</span>
+                <div class="news-cards" id="newsCarousel">
+                    <div class="loader-container">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -289,29 +334,16 @@
                 </div>
             </div>
         </div>
+
+        <!-- Activity Log movido para dentro do Hero -->
     </div>
 
-    <div class="bottom-bar">
-        <div class="user-section">
-            <div class="input-container">
-                <i class="fas fa-user-astronaut input-icon"></i>
-                <input type="text" id="username" placeholder="Nombre de usuario"
-                    data-i18n-placeholder="placeholder_username" autocomplete="off" spellcheck="false">
-            </div>
-        </div>
+    <!-- Bottom Bar antiga removida/esvaziada -->
+    <div class="bottom-bar" style="display: none;"></div>
 
-        <div class="center-status">
-            <p id="status"></p>
-            <div id="progressContainer" class="progress-container" style="display: none;">
-                <div id="progressBar" class="progress-bar"></div>
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <button id="modsBtn" class="bar-btn secondary"><span data-i18n="mods_btn">MODS</span> <span class="badge"
-                    data-i18n="beta_badge">BETA</span></button>
-            <button id="playBtn" class="bar-btn primary" data-i18n="play_btn">JUGAR</button>
-        </div>
+    <!-- Barra de Progresso na Borda Inferior -->
+    <div id="progressContainer" class="progress-bar-edge-container" style="display: none;">
+        <div id="progressBar" class="progress-bar-edge"></div>
     </div>
 
     <div id="modModal" class="modal-overlay">
@@ -321,11 +353,12 @@
                 <div class="modal-header-row">
                     <img id="modalModImage" src="" alt="Mod Logo" class="modal-mod-logo">
                     <div class="modal-header-text">
-                        <h2 id="modalModName">Nombre del Mod</h2>
-                        <p class="modal-mod-author" id="modalModAuthor">por Autor</p>
+                        <h2 id="modalModName">Mod Name</h2>
+                        <p class="modal-mod-author" id="modalModAuthor">by Author</p>
                         <div class="modal-mod-meta">
                             <span class="mod-pill" id="modalModVersion">v1.0.0</span>
-                            <span class="mod-pill" id="modalModDate">Actualizado: 12/12/2024</span>
+                            <span class="mod-pill"><span data-i18n="modal_updated">Atualizado</span>: <span
+                                    id="modalModDate">12/12/2024</span></span>
                         </div>
                     </div>
                 </div>
@@ -334,21 +367,27 @@
                     <div class="stat-box">
                         <i class="fas fa-download"></i>
                         <span id="modalModDownloads">10k</span>
-                        <span class="stat-label">Descargas</span>
+                        <div class="stat-box">
+                            <i class="fas fa-download"></i>
+                            <span id="modalModDownloads">10k</span>
+                            <span class="stat-label" data-i18n="modal_downloads">Downloads</span>
+                        </div>
+                    </div>
+                    <div class="modal-description-area">
+                        <h3 data-i18n="modal_about">Sobre este mod</h3>
+                        <p id="modalModDescription">...</p>
                     </div>
                 </div>
-                <div class="modal-description-area">
-                    <h3>Acerca de este mod</h3>
-                    <p id="modalModDescription">Descripción del mod...</p>
-                </div>
-            </div>
 
-            <div class="modal-footer-actions">
-                <button id="modalInstallBtn" class="action-btn primary-btn large-btn">Instalar Ahora</button>
+                <div class="modal-footer-actions">
+                    <button id="modalInstallBtn" class="action-btn primary-btn large-btn"
+                        data-i18n="modal_install">Instalar Agora</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- CORRIGIDO: customDialog agora está FORA do modModal -->
     <div id="customDialog" class="modal-overlay custom-dialog-overlay">
         <div class="modal-content small-modal">
             <h2 id="dialogTitle">Title</h2>

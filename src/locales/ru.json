@@ -46,5 +46,11 @@
     "discord_mods_manage":  "Gestionando Mods",
     "discord_playing":  "Jugando a Hytale",
     "discord_downloading":  "Descargando Hytale",
-    "discord_installing":  "Instalando Hytale"
+    "discord_installing":  "Instalando Hytale",
+    "setting_game_channel": "Game Channel",
+    "setting_game_channel_desc": "Select installed version",
+    "home_channel_label": "Канал",
+    "home_version_label": "Версия",
+    "game_channel_latest": "Latest",
+    "game_channel_beta": "Beta"
 }

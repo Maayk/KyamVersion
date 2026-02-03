@@ -1,16 +1,17 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { app } = require('electron');
-const { _trackEvent } = require('../analytics');
 
 const configPath = path.join(app.getPath('appData'), 'Battly4Hytale', 'user-settings.json');
 
 const defaultSettings = {
     hideLauncher: true,
     gpuPreference: 'auto',
+    gameChannel: 'latest',
     useCustomJava: false,
     customJavaPath: '',
-    profiles: []
+    profiles: [],
+    playerUUID: ''
 };
 
 let currentSettings = { ...defaultSettings };
@@ -32,7 +33,6 @@ async function loadSettings() {
 async function saveSettings(settings) {
     if (settings) {
         currentSettings = { ...currentSettings, ...settings };
-        _trackEvent('settings_updated', settings);
     }
     try {
         await fs.ensureDir(path.dirname(configPath));

@@ -1,23 +1,170 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { _trackEvent, updateUserProperties } = require('./analytics');
+const fs = require('fs-extra');
 const { exec } = require('child_process');
-const { initialize } = require("@aptabase/electron/main");
-initialize("A-SH-6163498396", {
-    host: "https://analytics-hytale.battlylauncher.com"
-});
 
 const { checkForUpdates } = require('./services/updater');
 const { launchGame } = require('./services/game');
 const { loadSettings, saveSettings, getSettings } = require('./services/config');
 const { registerModHandlers } = require('./services/mods');
-const { initDiscord, setActivity } = require('./services/discord');
 const { fetchHytaleNews } = require('./services/news');
 
 let cachedGpuInfo = null;
 let gpuInfoPromise = null;
 let mainWindow = null;
 let splashWindow = null;
+
+const GAME_CONFIG = {
+    defaultChannel: 'latest',
+    channels: ['latest', 'beta'],
+    gamePathParts: ['install', 'release', 'package', 'game']
+};
+
+const VERSION_CONFIG = {
+    fileCandidates: [
+        'version.txt',
+        'Version.txt',
+        'build.txt',
+        'build.version',
+        'version.json',
+        path.join('Client', 'version.txt'),
+        path.join('Client', 'Version.txt'),
+        path.join('Client', 'build.txt'),
+        path.join('Client', 'build.version'),
+        path.join('Client', 'version.json'),
+        path.join('Client', 'resources', 'version.txt'),
+        path.join('Client', 'resources', 'version.json')
+    ],
+    patterns: [
+        /(\d{4}\.\d{2}\.\d{2}(?:-[A-Za-z0-9]+)?)/,
+        /(\d{2}\.\d{2}\.\d{4}(?:-[A-Za-z0-9]+)?)/
+    ]
+};
+
+const REPAIR_CONFIG = {
+    maxRetries: 3,
+    retryDelayMs: 1000,
+    retryCodes: ['EBUSY', 'EPERM', 'ENOTEMPTY', 'EACCES'],
+    processNames: ['HytaleClient.exe'],
+    pendingDeleteDir: 'pending_delete'
+};
+
+function normalizeGameChannel(value) {
+    return GAME_CONFIG.channels.includes(value) ? value : GAME_CONFIG.defaultChannel;
+}
+
+function buildGameDir(rootPath, channel) {
+    return path.join(rootPath, ...GAME_CONFIG.gamePathParts, channel);
+}
+
+async function resolveRepairTarget(hytaleRoot, preferredChannel) {
+    const primaryDir = buildGameDir(hytaleRoot, preferredChannel);
+    if (await fs.pathExists(primaryDir)) {
+        return { channel: preferredChannel, dir: primaryDir };
+    }
+
+    const fallbackChannel = preferredChannel === 'beta' ? 'latest' : 'beta';
+    const fallbackDir = buildGameDir(hytaleRoot, fallbackChannel);
+    if (await fs.pathExists(fallbackDir)) {
+        return { channel: fallbackChannel, dir: fallbackDir };
+    }
+
+    return { channel: preferredChannel, dir: primaryDir };
+}
+
+function extractVersionFromText(content) {
+    if (!content) return null;
+    for (const pattern of VERSION_CONFIG.patterns) {
+        const match = content.match(pattern);
+        if (match && match[1]) return match[1];
+    }
+    return null;
+}
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function removeDirWithRetry(targetPath) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= REPAIR_CONFIG.maxRetries; attempt += 1) {
+        try {
+            await fs.remove(targetPath);
+            return { success: true, attempts: attempt + 1 };
+        } catch (error) {
+            lastError = error;
+            const shouldRetry = REPAIR_CONFIG.retryCodes.includes(error.code);
+            if (!shouldRetry || attempt >= REPAIR_CONFIG.maxRetries) {
+                break;
+            }
+            await wait(REPAIR_CONFIG.retryDelayMs);
+        }
+    }
+    const finalError = lastError || new Error('Failed to remove directory');
+    throw finalError;
+}
+
+async function stopGameProcesses() {
+    if (process.platform !== 'win32') return;
+    const tasks = REPAIR_CONFIG.processNames.map((name) => new Promise((resolve) => {
+        exec(`taskkill /F /IM "${name}" /T`, () => resolve());
+    }));
+    await Promise.all(tasks);
+}
+
+async function moveToPendingDelete(hytaleRoot, gameDir, channel) {
+    const pendingBase = path.join(hytaleRoot, 'cache', REPAIR_CONFIG.pendingDeleteDir);
+    await fs.ensureDir(pendingBase);
+    const pendingTarget = path.join(pendingBase, `${channel}_${Date.now()}`);
+    await fs.move(gameDir, pendingTarget, { overwrite: true });
+    removeDirWithRetry(pendingTarget).catch((error) => {
+        console.error('Pending delete failed:', error.message || error);
+    });
+}
+
+async function readVersionFromGameDir(gameDir) {
+    for (const relativePath of VERSION_CONFIG.fileCandidates) {
+        const fullPath = path.join(gameDir, relativePath);
+        try {
+            if (await fs.pathExists(fullPath)) {
+                const content = await fs.readFile(fullPath, 'utf8');
+                const version = extractVersionFromText(content);
+                if (version) return version;
+            }
+        } catch (e) {
+        }
+    }
+    return null;
+}
+
+async function readVersionFromLocalConfig(channel) {
+    const normalized = channel === 'beta' ? 'beta' : 'latest';
+    const candidatePaths = [
+        path.join(app.getAppPath(), 'config.json'),
+        path.join(process.resourcesPath, 'config.json')
+    ];
+    for (const localConfigPath of candidatePaths) {
+        try {
+            if (await fs.pathExists(localConfigPath)) {
+                const cfg = await fs.readJson(localConfigPath);
+                let version = null;
+                if (cfg && cfg.hytale) {
+                    if (cfg.hytale[normalized] && typeof cfg.hytale[normalized].version === 'string') {
+                        version = cfg.hytale[normalized].version;
+                    } else if (cfg.hytale.latest && typeof cfg.hytale.latest.version === 'string') {
+                        version = cfg.hytale.latest.version;
+                    } else if (typeof cfg.hytale.version === 'string') {
+                        version = cfg.hytale.version;
+                    }
+                }
+                return version || null;
+            }
+        } catch (e) {
+            console.error('Failed to read config.json:', e.message);
+        }
+    }
+    return null;
+}
 
 async function loadGpuInfo() {
     if (cachedGpuInfo) return cachedGpuInfo;
@@ -44,7 +191,6 @@ async function loadGpuInfo() {
 
                 cachedGpuInfo = gpus;
                 console.log('GPU Info Cached (Fast):', JSON.stringify(cachedGpuInfo));
-                updateUserProperties({ gpu_model: gpus.dedicated || gpus.integrated || 'Unknown' });
                 resolve(cachedGpuInfo);
             });
         } else {
@@ -54,19 +200,26 @@ async function loadGpuInfo() {
     return gpuInfoPromise;
 }
 
-ipcMain.handle('perform-update', async (event, downloadUrl) => {
-    _trackEvent('perform_update', { category: 'update', label: 'manual_trigger' });
-    require('electron').shell.openExternal(downloadUrl);
-    app.quit();
-});
-
-ipcMain.on('track-event', (event, category, action, label, value) => {
-    _trackEvent(action || 'renderer_event', { category, label, value });
-});
+// ipcMain.handle('perform-update', async (event, downloadUrl) => {
+//     require('electron').shell.openExternal(downloadUrl);
+//     app.quit();
+// }); // Desativado: launcher modificado não deve auto-atualizar
 
 
 ipcMain.handle('get-settings', async () => {
     return getSettings();
+});
+
+ipcMain.handle('get-hytale-version', async (event, channel) => {
+    const hytaleRoot = path.join(app.getPath('appData'), 'Kyamtale');
+    const settings = getSettings();
+    const selectedChannel = normalizeGameChannel(channel || settings.gameChannel);
+    const gameDir = buildGameDir(hytaleRoot, selectedChannel);
+
+    const gameVersion = await readVersionFromGameDir(gameDir);
+    if (gameVersion) return gameVersion;
+
+    return await readVersionFromLocalConfig(selectedChannel);
 });
 
 ipcMain.handle('save-settings', async (event, settings) => {
@@ -91,26 +244,36 @@ ipcMain.handle('select-java-path', async () => {
 });
 
 ipcMain.on('open-game-location', () => {
-    const hytaleRoot = path.join(app.getPath('appData'), 'Hytale');
+    const hytaleRoot = path.join(app.getPath('appData'), 'Kyamtale');
     require('electron').shell.openPath(hytaleRoot);
 });
 
-ipcMain.on('repair-game', async (event) => {
-    const fs = require('fs-extra');
-    const hytaleRoot = path.join(app.getPath('appData'), 'Hytale');
-    const gameDir = path.join(hytaleRoot, 'install', 'release', 'package', 'game', 'latest');
+ipcMain.on('repair-game', async (event, channel) => {
+    const hytaleRoot = path.join(app.getPath('appData'), 'Kyamtale');
+    const settings = getSettings();
+    const selectedChannel = normalizeGameChannel(channel || settings.gameChannel);
+    const target = await resolveRepairTarget(hytaleRoot, selectedChannel);
+    const gameDir = target.dir;
 
     try {
         console.log("Repairing game: Deleting game directory...");
         if (await fs.pathExists(gameDir)) {
-            await fs.remove(gameDir);
+            await stopGameProcesses();
+            await wait(500);
+            try {
+                await removeDirWithRetry(gameDir);
+            } catch (error) {
+                if (REPAIR_CONFIG.retryCodes.includes(error.code)) {
+                    await moveToPendingDelete(hytaleRoot, gameDir, selectedChannel);
+                } else {
+                    throw error;
+                }
+            }
         }
         event.sender.send('repair-complete', { success: true });
-        _trackEvent('game_repair', { status: 'success' });
     } catch (error) {
         console.error("Repair failed:", error);
         event.sender.send('repair-complete', { success: false, error: error.message });
-        _trackEvent('game_repair', { status: 'failed', error: error.message });
     }
 });
 
@@ -136,7 +299,6 @@ function createSplashWindow() {
 function createMainWindow() {
 
     loadSettings();
-    _trackEvent('app_start');
 
     mainWindow = new BrowserWindow({
         width: 1152,
@@ -166,8 +328,7 @@ function createMainWindow() {
         }
         mainWindow.show();
 
-        _trackEvent('app_start', { source: 'main_process' });
-        checkForUpdates(mainWindow);
+        // checkForUpdates(mainWindow); // Desativado: launcher modificado não deve auto-atualizar
     });
 
     ipcMain.on('minimize-window', () => {
@@ -175,7 +336,14 @@ function createMainWindow() {
     });
 
     ipcMain.on('close-window', () => {
-        if (mainWindow) mainWindow.close();
+        app.quit();
+    });
+
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+        if (process.platform !== 'darwin') {
+            app.quit();
+        }
     });
 }
 
@@ -189,7 +357,6 @@ app.whenReady().then(async () => {
     }, 1500);
 
     registerModHandlers(ipcMain);
-    initDiscord();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -206,8 +373,4 @@ app.on('window-all-closed', () => {
 
 ipcMain.on('launch-game', (event, username) => {
     launchGame(event, username);
-});
-
-ipcMain.on('discord-activity', (event, details, state) => {
-    setActivity(details, state);
 });

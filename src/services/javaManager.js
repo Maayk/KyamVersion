@@ -6,7 +6,7 @@ const StreamZip = require('node-stream-zip');
 const { downloadFile } = require('./utils');
 const os = require('os');
 
-const JRE_DIR = path.join(app.getPath('appData'), 'Hytale', 'install', 'release', 'package', 'jre', 'latest');
+const JRE_DIR = path.join(app.getPath('appData'), 'Kyamtale', 'install', 'release', 'package', 'jre', 'latest');
 const JAVA_EXECUTABLE = process.platform === 'win32' ? 'java.exe' : 'java';
 
 async function getJavaExec() {

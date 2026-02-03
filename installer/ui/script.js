@@ -9,22 +9,18 @@ const translations = {
         step_finish: "Finalizar",
         title_welcome: "Instalar Battly Launcher",
         desc_welcome: "Bienvenido al asistente de instalación de Battly Launcher para Hytale. Este programa instalará la última versión en tu sistema.",
-        check_opera: "Instalar Opera Browser",
-        check_opera_sub: "Navegador recomendado para gamers (Opcional)",
         btn_install: "Instalar",
         title_installing: "Instalando...",
         status_init: "Preparando...",
         title_finished: "¡Instalación Completada!",
         desc_finished: "Battly Launcher se ha instalado correctamente en tu ordenador.",
         btn_launch: "Jugar Ahora",
-        // Status keys
         status_cleaning: "Limpiando instalación anterior...",
         status_downloading_start: "Descargando Battly Launcher...",
         status_downloading_percent: "Descargando... {0}%",
         status_extracting: "Extrayendo archivos...",
         status_installing: "Instalando...",
         status_shortcuts: "Creando accesos directos...",
-        status_opera: "Instalando Opera...",
     },
     en: {
         step_welcome: "Welcome",
@@ -32,22 +28,18 @@ const translations = {
         step_finish: "Finish",
         title_welcome: "Install Battly Launcher",
         desc_welcome: "Welcome to the Battly Launcher setup wizard for Hytale. This program will install the latest version on your system.",
-        check_opera: "Install Opera Browser",
-        check_opera_sub: "Recommended browser for gamers (Optional)",
         btn_install: "Install",
         title_installing: "Installing...",
         status_init: "Preparing...",
         title_finished: "Installation Complete!",
         desc_finished: "Battly Launcher has been successfully installed on your computer.",
         btn_launch: "Play Now",
-        // Status keys
         status_cleaning: "Cleaning previous installation...",
         status_downloading_start: "Downloading Battly Launcher...",
         status_downloading_percent: "Downloading... {0}%",
         status_extracting: "Extracting files...",
         status_installing: "Installing...",
         status_shortcuts: "Creating shortcuts...",
-        status_opera: "Installing Opera...",
     },
     de: {
         step_welcome: "Willkommen",
@@ -55,8 +47,6 @@ const translations = {
         step_finish: "Fertigstellen",
         title_welcome: "Battly Launcher installieren",
         desc_welcome: "Willkommen beim Installationsassistenten für den Battly Launcher. Dieses Programm installiert die neueste Version auf Ihrem System.",
-        check_opera: "Opera Browser installieren",
-        check_opera_sub: "Empfohlener Browser für Gamer (Optional)",
         btn_install: "Installieren",
         title_installing: "Installiere...",
         status_init: "Vorbereitung...",
@@ -69,7 +59,6 @@ const translations = {
         status_extracting: "Entpacke Dateien...",
         status_installing: "Installiere...",
         status_shortcuts: "Erstelle Verknüpfungen...",
-        status_opera: "Installiere Opera...",
     },
     fr: {
         step_welcome: "Bienvenue",
@@ -77,8 +66,6 @@ const translations = {
         step_finish: "Terminer",
         title_welcome: "Installer Battly Launcher",
         desc_welcome: "Bienvenue dans l'assistant d'installation de Battly Launcher. Ce programme installera la dernière version sur votre système.",
-        check_opera: "Installer Opera Browser",
-        check_opera_sub: "Navigateur recommandé pour les gamers (Optionnel)",
         btn_install: "Installer",
         title_installing: "Installation...",
         status_init: "Préparation...",
@@ -91,7 +78,6 @@ const translations = {
         status_extracting: "Extraction des fichiers...",
         status_installing: "Installation...",
         status_shortcuts: "Création des raccourcis...",
-        status_opera: "Installation de Opera...",
     },
     pt: {
         step_welcome: "Bem-vindo",
@@ -99,8 +85,6 @@ const translations = {
         step_finish: "Concluir",
         title_welcome: "Instalar Battly Launcher",
         desc_welcome: "Bem-vindo ao assistente de instalação do Battly Launcher. Este programa instalará a versão mais recente no seu sistema.",
-        check_opera: "Instalar Opera Browser",
-        check_opera_sub: "Navegador recomendado para gamers (Opcional)",
         btn_install: "Instalar",
         title_installing: "Instalando...",
         status_init: "Preparando...",
@@ -113,7 +97,6 @@ const translations = {
         status_extracting: "Extraindo arquivos...",
         status_installing: "Instalando...",
         status_shortcuts: "Criando atalhos...",
-        status_opera: "Instalando Opera...",
     },
     ru: {
         step_welcome: "Добро пожаловать",
@@ -121,8 +104,6 @@ const translations = {
         step_finish: "Завершение",
         title_welcome: "Установить Battly Launcher",
         desc_welcome: "Добро пожаловать в мастер установки Battly Launcher. Эта программа установит последнюю версию на ваш компьютер.",
-        check_opera: "Установить браузер Opera",
-        check_opera_sub: "Рекомендуемый браузер для геймеров (Необязательно)",
         btn_install: "Установить",
         title_installing: "Установка...",
         status_init: "Подготовка...",
@@ -135,7 +116,6 @@ const translations = {
         status_extracting: "Извлечение файлов...",
         status_installing: "Установка...",
         status_shortcuts: "Создание ярлыков...",
-        status_opera: "Установка Opera...",
     },
     zh: {
         step_welcome: "欢迎",
@@ -143,8 +123,6 @@ const translations = {
         step_finish: "完成",
         title_welcome: "安装 Battly Launcher",
         desc_welcome: "欢迎使用 Battly Launcher 安装向导。该程序将在您的系统上安装最新版本。",
-        check_opera: "安装 Opera 浏览器",
-        check_opera_sub: "玩家推荐浏览器（可选）",
         btn_install: "安装",
         title_installing: "正在安装...",
         status_init: "准备中...",
@@ -157,7 +135,6 @@ const translations = {
         status_extracting: "正在解压文件...",
         status_installing: "正在安装...",
         status_shortcuts: "正在创建快捷方式...",
-        status_opera: "正在安装 Opera...",
     },
     ja: {
         step_welcome: "ようこそ",
@@ -165,8 +142,6 @@ const translations = {
         step_finish: "完了",
         title_welcome: "Battly Launcher のインストール",
         desc_welcome: "Battly Launcher インストールウィザードへようこそ。このプログラムはシステムに最新バージョンをインストールします。",
-        check_opera: "Opera ブラウザをインストール",
-        check_opera_sub: "ゲーマー推奨ブラウザ（オプション）",
         btn_install: "インストール",
         title_installing: "インストール中...",
         status_init: "準備中...",
@@ -179,7 +154,6 @@ const translations = {
         status_extracting: "ファイルを展開中...",
         status_installing: "インストール中...",
         status_shortcuts: "ショートカットを作成中...",
-        status_opera: "Opera をインストール中...",
     }
 };
 
@@ -210,15 +184,12 @@ function initLocales() {
     currentLang = detectLanguage();
     console.log("Detected language:", currentLang);
 
-    // Static Elements Map
     const map = {
         'step-welcome-text': 'step_welcome',
         'step-install-text': 'step_install',
         'step-finish-text': 'step_finish',
         'title-welcome': 'title_welcome',
         'desc-welcome': 'desc_welcome',
-        'text-opera-main': 'check_opera',
-        'text-opera-sub': 'check_opera_sub',
         'btn-install': 'btn_install',
         'title-installing': 'title_installing',
         'status-text': 'status_init',
@@ -249,7 +220,6 @@ const btnInstall = document.getElementById('btn-install');
 const btnLaunch = document.getElementById('btn-launch');
 const btnClose = document.getElementById('close-btn');
 
-const checkOpera = document.getElementById('check-opera');
 const progressBar = document.getElementById('progress-bar');
 const statusText = document.getElementById('status-text');
 

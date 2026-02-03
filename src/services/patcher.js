@@ -3,13 +3,13 @@ const path = require('path');
 const { app } = require('electron');
 const { execFile } = require('child_process');
 const { downloadFile } = require('./utils');
-const { _trackEvent } = require('../analytics');
 const StreamZip = require('node-stream-zip');
 const os = require('os');
+const { fileURLToPath } = require('url');
 const serverPatcher = require('./serverPatcher');
 
 const CONFIG = {
-    toolsDir: path.join(app.getPath('appData'), 'Hytale', 'tools'),
+    toolsDir: path.join(app.getPath('appData'), 'Kyamtale', 'tools'),
     butlerBin: process.platform === 'win32' ? 'butler.exe' : 'butler',
     originalDomain: 'hytale.com',
     targetDomain: 'sanasol.ws',
@@ -17,8 +17,223 @@ const CONFIG = {
     primaryPatch: '4.pwr',
     fallbackPatch: '5.pwr',
     oldDiscord: '.gg/hytale',
-    newDiscord: '.gg/98SsAX7Ks9'
+    newDiscord: '.gg/98SsAX7Ks9',
+    localConfigPath: path.join(app.getAppPath(), 'config.json'),
+    localCdnDir: path.join(app.getAppPath(), 'cdn'),
+    extractScanMaxDepth: 6,
+    extractScanMaxEntries: 200
 };
+
+function isHttpUrl(value) {
+    return /^https?:\/\//i.test(value || '');
+}
+
+function normalizeConfigChannel(value) {
+    return value === 'beta' ? 'beta' : 'latest';
+}
+
+function getHytaleConfig(cfg, channel) {
+    const normalized = normalizeConfigChannel(channel);
+    if (cfg && cfg.hytale) {
+        if (cfg.hytale[normalized]) return cfg.hytale[normalized];
+        if (cfg.hytale.latest) return cfg.hytale.latest;
+        if (cfg.hytale.url) return cfg.hytale;
+    }
+    return null;
+}
+
+async function resolveLocalArchivePath(channel) {
+    let configUrl = null;
+
+    if (await fs.pathExists(CONFIG.localConfigPath)) {
+        try {
+            const cfg = await fs.readJson(CONFIG.localConfigPath);
+            const hytaleConfig = getHytaleConfig(cfg, channel);
+            configUrl = hytaleConfig && hytaleConfig.url ? hytaleConfig.url : null;
+        } catch (e) {
+            configUrl = null;
+        }
+    }
+
+    if (configUrl && isHttpUrl(configUrl)) {
+        return { url: configUrl, isRemote: true };
+    }
+
+    let candidate = null;
+    if (configUrl && !isHttpUrl(configUrl)) {
+        if (configUrl.startsWith('file://')) {
+            candidate = fileURLToPath(configUrl);
+        } else if (path.isAbsolute(configUrl)) {
+            candidate = configUrl;
+        } else {
+            candidate = path.join(app.getAppPath(), configUrl);
+        }
+    }
+
+    if (candidate && await fs.pathExists(candidate)) {
+        return { path: candidate, isRemote: false };
+    }
+
+    if (await fs.pathExists(CONFIG.localCdnDir)) {
+        const entries = await fs.readdir(CONFIG.localCdnDir);
+        const archives = entries.filter((file) => /\.zip$/i.test(file));
+
+        if (archives.length) {
+            const sorted = await Promise.all(archives.map(async (file) => {
+                const fullPath = path.join(CONFIG.localCdnDir, file);
+                const stat = await fs.stat(fullPath);
+                return { fullPath, mtime: stat.mtimeMs };
+            }));
+
+            sorted.sort((a, b) => b.mtime - a.mtime);
+            return { path: sorted[0].fullPath, isRemote: false };
+        }
+    }
+
+    return null;
+}
+
+async function extractArchive(archivePath, destDir) {
+    const ext = path.extname(archivePath).toLowerCase();
+    await fs.ensureDir(destDir);
+
+    if (ext === '.zip') {
+        const zip = new StreamZip.async({ file: archivePath });
+        await zip.extract(null, destDir);
+        await zip.close();
+        return;
+    }
+
+    throw new Error(`Unsupported archive format: ${ext}`);
+}
+
+async function moveDirContents(sourceDir, targetDir) {
+    const entries = await fs.readdir(sourceDir);
+    for (const entry of entries) {
+        await fs.move(path.join(sourceDir, entry), path.join(targetDir, entry), { overwrite: true });
+    }
+}
+
+async function resolveExtractedGameRoot(baseDir) {
+    const directCandidates = [
+        baseDir,
+        path.join(baseDir, 'install', 'release', 'package', 'game'),
+        path.join(baseDir, 'release', 'package', 'game'),
+        path.join(baseDir, 'package', 'game')
+    ];
+
+    for (const candidate of directCandidates) {
+        if (await fs.pathExists(path.join(candidate, 'Client'))) {
+            return candidate;
+        }
+    }
+
+    const entries = await fs.readdir(baseDir);
+    if (entries.length !== 1) return null;
+
+    const onlyPath = path.join(baseDir, entries[0]);
+    const stat = await fs.stat(onlyPath);
+    if (!stat.isDirectory()) return null;
+
+    const nestedCandidates = [
+        onlyPath,
+        path.join(onlyPath, 'install', 'release', 'package', 'game'),
+        path.join(onlyPath, 'release', 'package', 'game'),
+        path.join(onlyPath, 'package', 'game')
+    ];
+
+    for (const candidate of nestedCandidates) {
+        if (await fs.pathExists(path.join(candidate, 'Client'))) {
+            return candidate;
+        }
+    }
+
+    return await findGameRootByScan(baseDir);
+}
+
+async function findGameRootByScan(baseDir) {
+    const queue = [{ dir: baseDir, depth: 0 }];
+    let scanned = 0;
+
+    while (queue.length) {
+        const { dir, depth } = queue.shift();
+        scanned += 1;
+        if (scanned > CONFIG.extractScanMaxEntries) return null;
+
+        const clientDir = path.join(dir, 'Client');
+        if (await fs.pathExists(clientDir)) {
+            const clientExe = path.join(clientDir, 'HytaleClient.exe');
+            if (await fs.pathExists(clientExe)) return dir;
+            return dir;
+        }
+
+        if (depth >= CONFIG.extractScanMaxDepth) continue;
+
+        let entries = null;
+        try {
+            entries = await fs.readdir(dir);
+        } catch (e) {
+            entries = null;
+        }
+
+        if (!entries || !entries.length) continue;
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry);
+            let stat = null;
+            try {
+                stat = await fs.stat(fullPath);
+            } catch (e) {
+                stat = null;
+            }
+            if (stat && stat.isDirectory()) {
+                queue.push({ dir: fullPath, depth: depth + 1 });
+            }
+        }
+    }
+
+    return null;
+}
+
+async function tryInstallFromLocalArchive(gameDir, event, channel) {
+    const archiveSource = await resolveLocalArchivePath(channel);
+    if (!archiveSource) return false;
+
+    let archivePath = archiveSource.path;
+    if (archiveSource.isRemote && archiveSource.url) {
+        const cachePath = path.join(app.getPath('appData'), 'Kyamtale', 'cache');
+        await fs.ensureDir(cachePath);
+        let fileName = `hytale-${normalizeConfigChannel(channel)}.zip`;
+        try {
+            const urlObj = new URL(archiveSource.url);
+            const baseName = path.basename(urlObj.pathname);
+            if (baseName) fileName = baseName;
+        } catch (e) {
+        }
+        archivePath = path.join(cachePath, fileName);
+        await fs.remove(archivePath).catch(() => { });
+        await downloadFile(archiveSource.url, archivePath, event);
+    }
+
+    if (event) event.reply('launch-status', 'status_extracting');
+    console.log('Installing game from archive:', archivePath);
+
+    const cachePath = path.join(app.getPath('appData'), 'Kyamtale', 'cache');
+    const tempDir = path.join(cachePath, `extract_${normalizeConfigChannel(channel)}`);
+    await fs.remove(tempDir).catch(() => { });
+    await extractArchive(archivePath, tempDir);
+
+    const sourceDir = await resolveExtractedGameRoot(tempDir);
+    if (!sourceDir) {
+        await fs.remove(tempDir).catch(() => { });
+        return false;
+    }
+
+    await fs.ensureDir(gameDir);
+    await moveDirContents(sourceDir, gameDir);
+    await fs.remove(tempDir).catch(() => { });
+    return true;
+}
 
 function encodeUtf16(str) {
     const buf = Buffer.alloc(str.length * 2);
@@ -161,7 +376,10 @@ async function applyBinaryMods(clientPath, event) {
 }
 
 
-async function updateGameFiles(gameDir, event) {
+async function updateGameFiles(gameDir, event, channel) {
+    const installedFromLocal = await tryInstallFromLocalArchive(gameDir, event, channel);
+    if (installedFromLocal) return;
+
     const patcherBin = await ensureTools(event);
 
     const sysOs = process.platform === 'win32' ? 'windows' :
@@ -169,7 +387,7 @@ async function updateGameFiles(gameDir, event) {
     const sysArch = 'amd64';
 
     const patchUrlBase = `https://game-patches.hytale.com/patches/${sysOs}/${sysArch}/release/0/`;
-    const cachePath = path.join(app.getPath('appData'), 'Hytale', 'cache');
+    const cachePath = path.join(app.getPath('appData'), 'Kyamtale', 'cache');
     await fs.ensureDir(cachePath);
 
     const targetPatchFile = path.join(cachePath, CONFIG.primaryPatch);
@@ -180,7 +398,6 @@ async function updateGameFiles(gameDir, event) {
         try {
             console.log(`Attempting download: ${CONFIG.primaryPatch}`);
             await downloadFile(patchUrlBase + CONFIG.primaryPatch, targetPatchFile, event);
-            _trackEvent('hytale_patch_download', { patch: CONFIG.primaryPatch });
         } catch (err) {
             console.error(`Download failed for ${CONFIG.primaryPatch}, attempting fallback...`, err.message);
 
@@ -211,11 +428,8 @@ async function updateGameFiles(gameDir, event) {
             }
             if (error) {
                 console.error("Patcher Output:", stdout);
-                _trackEvent('hytale_install_error', { error: stderr || error.message });
                 reject(new Error(`Update failed: ${stderr || error.message}`));
             } else {
-                console.log("Game files updated successfully.");
-                _trackEvent('hytale_install_success', { patch: CONFIG.primaryPatch });
                 console.log("Game files updated successfully.");
                 resolve();
             }
@@ -228,4 +442,3 @@ module.exports = {
     patchClient: applyBinaryMods,
     patchServer: serverPatcher.patchServer.bind(serverPatcher)
 };
-

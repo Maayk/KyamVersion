@@ -7,12 +7,24 @@ const StreamZip = require('node-stream-zip');
 const { downloadFile } = require('./utils');
 const { getRemoteConfig } = require('./updater');
 const { getSettings } = require('./config');
-const { setActivity } = require('./discord');
 const { ensureJavaInstalled } = require('./javaManager');
 const { patchGame, patchClient, patchServer } = require('./patcher');
-const { _trackEvent } = require('../analytics');
+
+const GAME_CONFIG = {
+    defaultChannel: 'latest',
+    channels: ['latest', 'beta'],
+    gamePathParts: ['install', 'release', 'package', 'game']
+};
 
 const USER_AGENT = "Battly (https://github.com/1ly4s0/Battly4Hytale, 1.0.0)";
+
+function normalizeGameChannel(value) {
+    return GAME_CONFIG.channels.includes(value) ? value : GAME_CONFIG.defaultChannel;
+}
+
+function buildGameDir(rootPath, channel) {
+    return path.join(rootPath, ...GAME_CONFIG.gamePathParts, channel);
+}
 
 
 async function fetchAuthTokens(uuid, name) {
@@ -52,12 +64,13 @@ async function fetchAuthTokens(uuid, name) {
 
 async function launchGame(event, username) {
     console.log(`Solicitud de inicio para: ${username}`);
-    _trackEvent('game_launch_attempt', { username: username });
     const win = BrowserWindow.fromWebContents(event.sender);
 
-    const hytaleRoot = path.join(app.getPath('appData'), 'Hytale');
+    const hytaleRoot = path.join(app.getPath('appData'), 'Kyamtale');
 
-    const gameDir = path.join(hytaleRoot, 'install', 'release', 'package', 'game', 'latest');
+    const settings = getSettings();
+    const gameChannel = normalizeGameChannel(settings.gameChannel);
+    const gameDir = buildGameDir(hytaleRoot, gameChannel);
     const executablePath = path.join(gameDir, 'Client', 'HytaleClient.exe');
     const userDir = path.join(hytaleRoot, 'UserData');
 
@@ -77,7 +90,7 @@ async function launchGame(event, username) {
 
     if (!fs.existsSync(executablePath)) {
         try {
-            await patchGame(gameDir, event);
+            await patchGame(gameDir, event, gameChannel);
         } catch (e) {
             console.error("Game Patch Error:", e);
             event.reply('launch-error', `Error instalando juego: ${e.message}`);
@@ -106,13 +119,18 @@ async function launchGame(event, username) {
         return;
     }
 
-    event.reply('launch-status', 'Lanzando Hytale...');
+    event.reply('launch-status', 'Iniciando Hytale...');
 
-    const uuid = crypto.randomUUID();
+    let uuid = settings.playerUUID;
+
+    if (!uuid) {
+        uuid = crypto.randomUUID();
+        settings.playerUUID = uuid;
+        const { saveSettings } = require('./config');
+        await saveSettings(settings);
+    }
 
     const tokens = await fetchAuthTokens(uuid, username);
-
-    const settings = getSettings();
     const args = [
         '--app-dir', gameDir,
         '--user-dir', userDir,
@@ -126,7 +144,6 @@ async function launchGame(event, username) {
 
     console.log("Ejecutando:", executablePath, args);
 
-    setActivity('Jugando a Hytale', `Jugador: ${username}`, 'logo', 'Hytale');
 
     if (settings.hideLauncher && win) {
         win.hide();
@@ -158,7 +175,6 @@ async function launchGame(event, username) {
     child.on('close', (code) => {
         console.log(`Game process exited with code ${code}`);
         if (win) {
-            setActivity('En el Launcher');
             win.show();
             win.focus();
             event.reply('launch-status', '');

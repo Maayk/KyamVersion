@@ -3,42 +3,128 @@ const path = require('path');
 const fs = require('fs');
 
 let currentTranslations = {};
-const languageSelect = document.getElementById('languageSelect');
-const defaultLang = localStorage.getItem('battly_lang') || 'es';
+const defaultLang = 'pt';
+
+const SETTINGS_CONFIG = {
+    defaultGameChannel: 'latest',
+    gameChannels: ['latest', 'beta']
+};
+
+const ONBOARDING_CONFIG = {
+    enabled: false,
+    usernameMaxLength: 24
+};
+
+let newsData = [];
+let currentHeroIndex = 0;
 
 async function loadNews() {
-    const container = document.getElementById('newsContainer');
+    const heroImage = document.getElementById('heroImage');
+    const heroTitle = document.getElementById('heroTitle');
+    const heroDescription = document.getElementById('heroDescription');
+    const heroSection = document.getElementById('heroSection');
+    const newsCarousel = document.getElementById('newsCarousel');
+    const navDots = document.getElementById('navDots');
+    const heroReadMore = document.getElementById('heroReadMore');
+
     try {
-        const newsItems = await ipcRenderer.invoke('get-news');
+        newsData = await ipcRenderer.invoke('get-news');
 
-        container.innerHTML = '';
-
-        if (!newsItems || newsItems.length === 0) {
-            container.innerHTML = '<p class="error-text">No news available.</p>';
+        if (!newsData || newsData.length === 0) {
+            heroTitle.textContent = 'Sem notícias disponíveis';
+            newsCarousel.innerHTML = '<p style="color: rgba(255,255,255,0.4);">Nenhuma notícia encontrada.</p>';
             return;
         }
 
-        newsItems.forEach(item => {
+        updateHero(0);
+
+        newsCarousel.innerHTML = '';
+        newsData.forEach((item, idx) => {
             const card = document.createElement('div');
-            card.className = 'news-card fade-in-up';
-            card.onclick = () => require('electron').shell.openExternal(item.link);
+            card.className = 'news-card' + (idx === 0 ? ' active' : '');
+            card.dataset.index = idx;
 
             const bgImage = item.image || 'https://hytale.com/static/images/media/screenshots/1.jpg';
 
             card.innerHTML = `
-                <div class="news-image" style="background-image: url('${bgImage}')"></div>
-                <div class="news-content">
-                    <h3>${item.title}</h3>
-                    <p>${item.summary}</p>
+                <div class="news-card-image" style="background-image: url('${bgImage}')"></div>
+                <div class="news-card-content">
+                    <p class="news-card-title">${item.title}</p>
                 </div>
             `;
-            container.appendChild(card);
+
+            card.addEventListener('click', () => {
+                updateHero(idx);
+                document.querySelectorAll('.news-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                updateNavDots(idx);
+            });
+
+            newsCarousel.appendChild(card);
         });
+
+        if (navDots) {
+            navDots.innerHTML = '';
+            newsData.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = 'nav-dot' + (idx === 0 ? ' active' : '');
+                dot.addEventListener('click', () => {
+                    updateHero(idx);
+                    document.querySelectorAll('.news-card').forEach(c => c.classList.remove('active'));
+                    const cards = document.querySelectorAll('.news-card');
+                    if (cards[idx]) cards[idx].classList.add('active');
+                    updateNavDots(idx);
+                });
+                navDots.appendChild(dot);
+            });
+        }
+
+        if (heroReadMore) {
+            heroReadMore.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (newsData[currentHeroIndex]?.link) {
+                    require('electron').shell.openExternal(newsData[currentHeroIndex].link);
+                }
+            });
+        }
+
+        // Auto-slide a cada 6 segundos
+        if (newsData.length > 1) {
+            setInterval(() => {
+                const nextIndex = (currentHeroIndex + 1) % newsData.length;
+                updateHero(nextIndex);
+                document.querySelectorAll('.news-card').forEach(c => c.classList.remove('active'));
+                const cards = document.querySelectorAll('.news-card');
+                if (cards[nextIndex]) cards[nextIndex].classList.add('active');
+                updateNavDots(nextIndex);
+            }, 6000);
+        }
 
     } catch (e) {
         console.error("News Load Error:", e);
-        container.innerHTML = '<p class="error-text">Failed to load news.</p>';
+        heroTitle.textContent = 'Erro ao carregar notícias';
+        newsCarousel.innerHTML = '<p style="color: #ff4444;">Falha ao carregar.</p>';
     }
+}
+
+function updateNavDots(index) {
+    const dots = document.querySelectorAll('.nav-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+    });
+}
+
+function updateHero(index) {
+    currentHeroIndex = index;
+    const item = newsData[index];
+    if (!item) return;
+
+    const heroTitle = document.getElementById('heroTitle');
+    const heroDescription = document.getElementById('heroDescription');
+
+    // Background fixo já definido no CSS, apenas atualiza título e descrição
+    heroTitle.textContent = item.title;
+    heroDescription.textContent = item.summary || 'Sua aventura começa aqui';
 }
 
 async function loadLocale(lang) {
@@ -83,6 +169,11 @@ function applyTranslations() {
     if (playBtn && !playBtn.disabled) playBtn.innerHTML = t('play_btn');
 }
 
+function sanitizeUsername(value) {
+    if (typeof value !== 'string') return '';
+    return value.trim().replace(/\s+/g, ' ').slice(0, ONBOARDING_CONFIG.usernameMaxLength);
+}
+
 document.getElementById('minBtn').addEventListener('click', () => {
     ipcRenderer.send('minimize-window');
 });
@@ -118,16 +209,14 @@ settingsModal.addEventListener('click', (e) => {
     }
 });
 
-document.getElementById('discordBtn').addEventListener('click', () => {
-    require('electron').shell.openExternal('https://discord.com/invite/tecno-bros-885235460178342009');
-});
-
 const playBtn = document.getElementById('playBtn');
 const usernameInput = document.getElementById('username');
 const statusMsg = document.getElementById('status');
 const progressContainer = document.getElementById('progressContainer');
 const progressBar = document.getElementById('progressBar');
 const modsBtn = document.getElementById('modsBtn');
+const homeGameChannel = document.getElementById('homeGameChannel');
+const homeGameVersion = document.getElementById('homeGameVersion');
 
 const homeView = document.getElementById('homeView');
 const modsView = document.getElementById('modsView');
@@ -142,24 +231,81 @@ const installedList = document.getElementById('installedList');
 const modSearchInput = document.getElementById('modSearchInput');
 const searchModsBtn = document.getElementById('searchModsBtn');
 
-languageSelect.value = defaultLang;
 loadLocale(defaultLang);
 loadNews();
 
-languageSelect.addEventListener('change', (e) => {
-    const newLang = e.target.value;
-    loadLocale(newLang);
-    ipcRenderer.send('track-event', 'settings', 'language_changed', newLang, 1);
-});
-
 const savedUser = localStorage.getItem('hytale_username');
+let originalUsername = savedUser || '';
 if (savedUser) {
     usernameInput.value = savedUser;
 }
 
+const confirmNameBtn = document.getElementById('confirmNameBtn');
+
+// Mostra botão de confirmação quando o nome é alterado
+usernameInput.addEventListener('input', () => {
+    const currentValue = usernameInput.value.trim();
+    if (currentValue !== originalUsername && currentValue.length > 0) {
+        confirmNameBtn.classList.add('visible');
+    } else {
+        confirmNameBtn.classList.remove('visible');
+    }
+});
+
+// Confirma e salva o novo nome
+// Função de Log de Atividades
+function logActivity(message, type = 'normal') {
+    const logContainer = document.getElementById('activityLog');
+    if (!logContainer) return;
+
+    const time = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+    const item = document.createElement('div');
+    item.className = `log-item ${type}`;
+
+    let icon = '';
+    if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+    if (type === 'error') icon = '<i class="fas fa-exclamation-circle"></i>';
+    if (type === 'loading') icon = '<div class="log-spinner"></div>';
+
+    item.innerHTML = `
+        <span class="log-time">${time}</span>
+        ${icon}
+        <span>${message}</span>
+    `;
+
+    logContainer.appendChild(item);
+
+    // Auto scroll para o final
+    logContainer.scrollTop = logContainer.scrollHeight;
+
+    // Limita histórico (opcional)
+    if (logContainer.children.length > 20) {
+        logContainer.removeChild(logContainer.firstChild);
+    }
+}
+
+// Log inicial
+setTimeout(() => {
+    logActivity(t('status_init') || 'Bem-vindo ao KyamLauncher', 'normal');
+}, 1000); // Pequeno delay pra animar na entrada
+
+// Confirma e salva o novo nome
+confirmNameBtn.addEventListener('click', () => {
+    const newName = usernameInput.value.trim();
+    if (newName.length > 0) {
+        localStorage.setItem('hytale_username', newName);
+        originalUsername = newName;
+        confirmNameBtn.classList.remove('visible');
+
+        logActivity(`Nome salvo: ${newName}`, 'success');
+    }
+});
+
 const settingsPlayerName = document.getElementById('settingsPlayerName');
 const openLocationBtn = document.getElementById('openLocationBtn');
 const repairGameBtn = document.getElementById('repairGameBtn');
+const gameChannelSelect = document.getElementById('gameChannelSelect');
 const gpuDetectedText = document.getElementById('gpuDetectedText');
 const useCustomJavaCheck = document.getElementById('useCustomJavaCheck');
 const javaPathInput = document.getElementById('javaPathInput');
@@ -168,6 +314,38 @@ const customJavaArea = document.getElementById('customJavaArea');
 const gpuButtons = document.querySelectorAll('.gpu-btn');
 
 let currentSettingsData = {};
+let currentGameVersion = null;
+
+const normalizeGameChannel = (value) => {
+    return SETTINGS_CONFIG.gameChannels.includes(value) ? value : SETTINGS_CONFIG.defaultGameChannel;
+};
+
+const updateHomeGameVersion = () => {
+    if (!homeGameVersion) return;
+    homeGameVersion.textContent = currentGameVersion || '-';
+};
+
+const loadGameVersion = async (channel) => {
+    try {
+        const version = await ipcRenderer.invoke('get-hytale-version', channel);
+        if (typeof version === 'string' && version.trim()) {
+            currentGameVersion = version.trim();
+        }
+    } catch (e) {
+        currentGameVersion = null;
+    }
+    updateHomeGameVersion();
+};
+
+const syncGameChannel = async () => {
+    currentSettingsData = await ipcRenderer.invoke('get-settings');
+    const channel = normalizeGameChannel(currentSettingsData.gameChannel);
+    if (homeGameChannel) homeGameChannel.value = channel;
+    if (gameChannelSelect) gameChannelSelect.value = channel;
+    await loadGameVersion(channel);
+};
+
+syncGameChannel();
 
 const settingsTabs = document.querySelectorAll('.settings-tab');
 settingsTabs.forEach(tab => {
@@ -249,11 +427,25 @@ if (repairGameBtn) {
     repairGameBtn.onclick = async () => {
         const confirmed = await showCustomDialog(t('repair_confirm_title'), t('repair_confirm_msg'), true);
         if (confirmed) {
-            ipcRenderer.send('repair-game');
+            const selectedChannel = normalizeGameChannel(homeGameChannel ? homeGameChannel.value : currentSettingsData.gameChannel);
+            ipcRenderer.send('repair-game', selectedChannel);
             statusMsg.textContent = t('repair_started');
             settingsModal.classList.remove('active');
         }
     };
+}
+
+if (homeGameChannel) {
+    homeGameChannel.addEventListener('change', async (e) => {
+        const selectedChannel = normalizeGameChannel(e.target.value);
+        e.target.value = selectedChannel;
+        if (!currentSettingsData || !Object.keys(currentSettingsData).length) {
+            currentSettingsData = await ipcRenderer.invoke('get-settings');
+        }
+        currentSettingsData = { ...currentSettingsData, gameChannel: selectedChannel };
+        await ipcRenderer.invoke('save-settings', currentSettingsData);
+        await loadGameVersion(selectedChannel);
+    });
 }
 
 if (settingsBtn) {
@@ -262,6 +454,8 @@ if (settingsBtn) {
 
         if (settingsPlayerName) settingsPlayerName.value = usernameInput.value || currentSettingsData.playerName || '';
         if (hideLauncherCheck) hideLauncherCheck.checked = currentSettingsData.hideLauncher || false;
+        if (gameChannelSelect) gameChannelSelect.value = normalizeGameChannel(currentSettingsData.gameChannel);
+        if (homeGameChannel) homeGameChannel.value = normalizeGameChannel(currentSettingsData.gameChannel);
 
         const gpuPref = currentSettingsData.gpuPreference || 'auto';
         document.querySelectorAll('.gpu-btn').forEach(btn => {
@@ -302,6 +496,7 @@ if (closeSettingsBtn) {
             playerName: settingsPlayerName.value,
             hideLauncher: hideLauncherCheck.checked,
             gpuPreference: gpuVal,
+            gameChannel: normalizeGameChannel(homeGameChannel ? homeGameChannel.value : currentSettingsData.gameChannel),
             useCustomJava: useCustomJavaCheck.checked,
             customJavaPath: javaPathInput.value
         };
@@ -318,33 +513,90 @@ if (closeSettingsBtn) {
 ipcRenderer.on('repair-complete', (event, result) => {
     if (result.success) {
         showCustomDialog(t('success'), t('repair_success_msg'), false);
+        const selectedChannel = normalizeGameChannel(homeGameChannel ? homeGameChannel.value : currentSettingsData.gameChannel);
+        loadGameVersion(selectedChannel);
     } else {
         showCustomDialog(t('error'), result.error, false);
     }
 });
 
 playBtn.addEventListener('click', () => {
-    const username = usernameInput.value.trim();
+    // Verifica se há alteração de nome não confirmada
+    const currentValue = sanitizeUsername(usernameInput.value);
+    if (currentValue !== originalUsername && currentValue.length > 0) {
+        shakeElement(confirmNameBtn);
+        statusMsg.textContent = 'Confirme o novo nome antes de jogar';
+        statusMsg.style.color = '#ffb347';
+        setTimeout(() => {
+            statusMsg.textContent = '';
+            statusMsg.style.color = '';
+        }, 3000);
+        return;
+    }
+
+    // Usa o nome salvo (confirmado)
+    const username = sanitizeUsername(originalUsername || currentValue);
 
     if (!username) {
         shakeElement(usernameInput);
-        statusMsg.textContent = t('status_error') + "Username required";
+        statusMsg.textContent = t('status_error') + " Nome obrigatório";
         statusMsg.style.color = "#ff4444";
         return;
     }
 
     localStorage.setItem('hytale_username', username);
 
-    statusMsg.textContent = t('status_init');
-    statusMsg.style.color = "#00d9ff";
+    // Feedback Visual
+    logActivity('Iniciando Launcher...', 'loading');
+
+    // Atualiza estado do botão
     playBtn.disabled = true;
     playBtn.style.opacity = "0.7";
-    playBtn.innerHTML = t('status_launching');
+    playBtn.querySelector('i')?.remove(); // Remove ícones anteriores se houver
+    playBtn.textContent = 'EXECUTANDO...'; // Texto mais limpo no botão
 
     ipcRenderer.send('launch-game', username);
 });
 
+
+// Handlers de Lançamento/Saída do Jogo
+ipcRenderer.on('launch-success', (event, message) => {
+    // Se a mensagem for "Juego terminado", significa que o jogo fechou
+    if (message === 'Juego terminado' || message === 'Game finished') {
+        playBtn.disabled = false;
+        playBtn.style.opacity = "1";
+        playBtn.textContent = t('play_btn'); // "JOGAR"
+
+        logActivity('Sessão de jogo finalizada', 'normal');
+        return;
+    }
+
+    // Outros casos de sucesso (ex: "Juego iniciado")
+    if (message === 'Juego iniciado') {
+        logActivity('Jogo iniciado com sucesso!', 'success');
+        // Oculta status de carregamento na barra de atividades se quiser, 
+        // ou mantém até o jogo fechar.
+    }
+});
+
+ipcRenderer.on('launch-error', (event, message) => {
+    playBtn.disabled = false;
+    playBtn.style.opacity = "1";
+    playBtn.textContent = t('play_btn');
+
+    logActivity(`Erro: ${message}`, 'error');
+});
+
+ipcRenderer.on('launch-status', (event, message) => {
+    if (message) {
+        logActivity(message, 'info');
+    }
+});
+
+
 let isModsViewOpen = false;
+
+const activityLog = document.getElementById('activityLog');
 
 modsBtn.addEventListener('click', () => {
     isModsViewOpen = !isModsViewOpen;
@@ -355,17 +607,13 @@ modsBtn.addEventListener('click', () => {
         modsBtn.style.color = '#00d9ff';
         modsBtn.style.borderColor = '#00d9ff';
 
-        let currentState = 'Catalogo de Hytale';
-        if (tabInstalled.classList.contains('active')) currentState = 'Revisando instalados';
-        ipcRenderer.send('discord-activity', 'Explorando Mods', currentState);
-
         if (modsList.children.length <= 1) loadPopularMods();
     } else {
         homeView.style.display = 'flex';
         modsView.style.display = 'none';
         modsBtn.style.color = '';
         modsBtn.style.borderColor = '';
-        ipcRenderer.send('discord-activity', 'En el Launcher');
+
     }
 });
 
@@ -384,13 +632,11 @@ function switchTab(tab) {
         tabInstalled.classList.remove('active');
         discoverSection.style.display = 'flex';
         installedSection.style.display = 'none';
-        ipcRenderer.send('discord-activity', 'Explorando Mods', 'Catalogo de Hytale');
     } else {
         tabDiscover.classList.remove('active');
         tabInstalled.classList.add('active');
         discoverSection.style.display = 'none';
         installedSection.style.display = 'block';
-        ipcRenderer.send('discord-activity', 'Gestionando Mods', 'Revisando instalados');
     }
 }
 
@@ -409,19 +655,25 @@ async function loadPopularMods(query = '') {
     modsList.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> ${t('status_init')}</div>`;
 
     try {
-        const result = await ipcRenderer.invoke('search-mods', query);
+        // Busca mods e lista de instalados em paralelo
+        const [modsResult, installedResult] = await Promise.all([
+            ipcRenderer.invoke('search-mods', query),
+            ipcRenderer.invoke('list-installed-mods')
+        ]);
 
-        if (result.success) {
-            renderMods(result.data);
+        const installedMods = installedResult.success ? installedResult.data : [];
+
+        if (modsResult.success) {
+            renderMods(modsResult.data, installedMods);
         } else {
-            modsList.innerHTML = `<p style="color: #ff4444;">${t('status_error')} ${result.error}</p>`;
+            modsList.innerHTML = `<p style="color: #ff4444;">${t('status_error')} ${modsResult.error}</p>`;
         }
     } catch (err) {
         modsList.innerHTML = `<p style="color: #ff4444;">${t('status_error')} ${err.message}</p>`;
     }
 }
 
-function renderMods(mods) {
+function renderMods(mods, installedMods = []) {
     modsList.innerHTML = '';
 
     if (mods.length === 0) {
@@ -429,20 +681,46 @@ function renderMods(mods) {
         return;
     }
 
+    // Cria um mapa de mods instalados por nome (sem versão) para verificação rápida
+    const installedMap = new Map();
+    installedMods.forEach(installed => {
+        // Remove .jar, .disabled e extrai o nome base (sem versão)
+        const baseName = installed.name
+            .replace(/\.jar$/i, '')
+            .replace(/\.disabled$/i, '')
+            .replace(/-[\d.]+.*$/, '') // Remove versão tipo -1.0.0
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, ''); // Remove caracteres especiais
+        installedMap.set(baseName, installed);
+    });
+
     mods.forEach(mod => {
         const card = document.createElement('div');
         card.className = 'mod-card';
 
         const logoUrl = mod.logo && mod.logo.thumbnailUrl ? mod.logo.thumbnailUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=random&color=fff&size=128`;
-        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=333&color=fff&size=128&font-size=0.5`;
 
         const safeName = mod.name.replace(/'/g, "\\'");
+
+        // Verifica se está instalado pelo nome simplificado
+        const modBaseName = mod.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isInstalled = installedMap.has(modBaseName);
+
+        // Determina texto e classe do botão
+        let btnText, btnClass;
+        if (isInstalled) {
+            btnText = `<i class="fas fa-check"></i> ${t('modal_installed')}`;
+            btnClass = 'install-btn installed';
+        } else {
+            btnText = t('modal_install').toUpperCase();
+            btnClass = 'install-btn';
+        }
 
         card.innerHTML = `
             <div class="mod-icon-wrapper" style="width: 80px; height: 80px; margin-bottom: 10px;"></div>
             <div class="mod-title" title="${mod.name}">${mod.name}</div>
             <div class="mod-desc">${mod.summary}</div>
-            <button class="install-btn" data-id="${mod.id}" data-name="${safeName}">${t('modal_install').toUpperCase()}</button>
+            <button class="${btnClass}" data-id="${mod.id}" data-name="${safeName}">${btnText}</button>
         `;
 
         const iconWrapper = card.querySelector('.mod-icon-wrapper');
@@ -516,22 +794,34 @@ window.installMod = async (modId, modName, btnElement) => {
     btnElement.textContent = '...';
     btnElement.disabled = true;
 
-    statusMsg.textContent = `${t('status_installing')} ${modName}...`;
+    logActivity(`${t('status_installing')} ${modName}...`, 'loading');
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
 
     try {
         const result = await ipcRenderer.invoke('install-mod', { id: modId, name: modName });
+
+        // Esconde a barra de progresso quando termina
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+
         if (result.success) {
-            btnElement.textContent = t('modal_installed');
-            btnElement.style.background = '#4caf50';
-            statusMsg.textContent = `${modName} ${t('modal_installed')}`;
-            setTimeout(() => statusMsg.textContent = '', 3000);
+            btnElement.innerHTML = `<i class="fas fa-check"></i> ${t('modal_installed')}`;
+            btnElement.classList.add('installed');
+            logActivity(`✓ ${modName} instalado com sucesso!`, 'success');
         } else {
             throw new Error(result.error);
         }
     } catch (err) {
+        // Esconde a barra de progresso em caso de erro também
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+
         btnElement.textContent = 'ERROR';
         btnElement.style.background = '#ff4444';
-        statusMsg.textContent = `${t('status_error')} ${err.message}`;
+
+        logActivity(`${t('status_error')} ${err.message}`, 'error');
+
         setTimeout(() => {
             btnElement.textContent = originalText;
             btnElement.disabled = false;
@@ -645,46 +935,87 @@ function renderInstalledMods(mods) {
     installedList.innerHTML = '';
 
     if (mods.length === 0) {
-        installedList.innerHTML = `<p style="text-align:center;color:#888;">${t('no_installed_mods')}</p>`;
+        installedList.innerHTML = `
+            <div class="empty-mods-state">
+                <i class="fas fa-puzzle-piece"></i>
+                <p>${t('no_installed_mods')}</p>
+            </div>`;
         return;
     }
 
     mods.forEach(mod => {
         const item = document.createElement('div');
         item.className = 'installed-item';
+        item.dataset.filename = mod.fileName; // Critical for delegated events
+        if (!mod.enabled) item.classList.add('disabled');
+
+        const modDisplayName = mod.name.replace(/\.jar$/i, '').replace(/-/g, ' ');
+
+        // Sanitização simples para o nome do arquivo no onclick
+        const safeFileName = mod.fileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
         item.innerHTML = `
             <div class="inst-info">
-                <div class="inst-status ${mod.enabled ? 'status-on' : 'status-off'}"></div>
-                <span style="${!mod.enabled ? 'text-decoration: line-through; color: #888;' : ''}">${mod.name}</span>
+                <div class="inst-status-icon ${mod.enabled ? 'status-on' : 'status-off'}">
+                    <i class="fas ${mod.enabled ? 'fa-check' : 'fa-pause'}"></i>
+                </div>
+                <span class="inst-name">${modDisplayName}</span>
             </div>
-            <div class="inst-actions">
-                <button class="icon-btn" title="${mod.enabled ? 'Desactivar' : 'Activar'}" onclick="toggleMod('${mod.fileName}')">
+            <div class="inst-actions" style="z-index: 100;">
+                <button class="icon-btn toggle" title="${mod.enabled ? 'Desativar' : 'Ativar'}" onclick="event.stopPropagation(); window.toggleMod('${safeFileName}')">
                     <i class="fas fa-power-off"></i>
                 </button>
-                <button class="icon-btn delete" title="Eliminar" onclick="deleteMod('${mod.fileName}')">
-                    <i class="fas fa-trash"></i>
+                <button class="icon-btn delete" title="Remover" onclick="event.stopPropagation(); console.log('[DEBUG INLINE] Clicou deletar:', '${safeFileName}'); window.deleteMod('${safeFileName}')">
+                    <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         `;
+
+        // (Removido listeners manuais anteriores - usando inline agora)
         installedList.appendChild(item);
     });
 }
 
+// Delegated Event Listener removido
+// (A lógica foi movida para bind direto na criação do elemento em renderInstalledMods)
+
 window.toggleMod = async (fileName) => {
-    await ipcRenderer.invoke('toggle-mod', fileName);
-    loadInstalledMods();
+    try {
+        await ipcRenderer.invoke('toggle-mod', fileName);
+        loadInstalledMods();
+    } catch (e) {
+        console.error("Toggle error:", e);
+    }
 };
 
 window.deleteMod = async (fileName) => {
-    if (await customAsk(t('delete_mod_title'), t('delete_mod_confirm'))) {
-        await ipcRenderer.invoke('delete-mod', fileName);
-        loadInstalledMods();
+    console.log('Requesting delete for:', fileName);
+    let confirmed = false;
+
+    try {
+        confirmed = await customAsk(t('delete_mod_title'), t('delete_mod_confirm'));
+    } catch (e) {
+        console.error("CustomAsk failed, using fallback:", e);
+        // Fallback para confirm nativo se algo quebrar na tradução ou modal
+        confirmed = confirm("Delete this mod? (Fallback Check)");
+    }
+
+    if (confirmed) {
+        console.log('Confirmed delete for:', fileName);
+        try {
+            await ipcRenderer.invoke('delete-mod', fileName);
+            loadInstalledMods();
+        } catch (e) {
+            console.error("IPC delete failed:", e);
+            alert("Failed to delete: " + e.message);
+        }
+    } else {
+        console.log('Delete cancelled');
     }
 };
 
 ipcRenderer.on('launch-error', (event, message) => {
-    statusMsg.textContent = `${t('status_error')} ${message}`;
+    statusMsg.textContent = `${t('status_error')} ${message} `;
     statusMsg.style.color = "#ff4444";
     progressContainer.style.display = 'none';
     resetPlayBtn();
@@ -717,7 +1048,7 @@ ipcRenderer.on('download-progress', (event, data) => {
     } else if (speed) {
         statusMsg.textContent = `${t('status_downloading')} ${percent}% (${speed})`;
     } else {
-        statusMsg.textContent = `${t('status_downloading')} ${percent}%`;
+        statusMsg.textContent = `${t('status_downloading')} ${percent}% `;
     }
     statusMsg.style.display = 'none';
     statusMsg.offsetHeight;
@@ -735,20 +1066,20 @@ ipcRenderer.on('launch-success', (event, message) => {
     }, 5000);
 });
 
-ipcRenderer.on('update-available', async (event, remoteConfig) => {
-    console.log("Update available:", remoteConfig);
-    const title = t('update_available_title') || "Update Available";
-    const msg = (t('update_available_msg') || "A new version {v} is available. Update now?").replace('{v}', remoteConfig.version);
-
-    if (await customAsk(title, msg)) {
-        ipcRenderer.invoke('perform-update', remoteConfig.downloadUrl);
-    }
-});
+// ipcRenderer.on('update-available', async (event, remoteConfig) => {
+//     console.log("Update available:", remoteConfig);
+//     const title = t('update_available_title') || "Update Available";
+//     const msg = (t('update_available_msg') || "A new version {v} is available. Update now?").replace('{v}', remoteConfig.version);
+//
+//     if (await customAsk(title, msg)) {
+//         ipcRenderer.invoke('perform-update', remoteConfig.downloadUrl);
+//     }
+// }); // Desativado: launcher modificado não deve auto-atualizar
 
 function resetPlayBtn() {
     playBtn.disabled = false;
     playBtn.style.opacity = "1";
-    playBtn.innerHTML = `${t('play_btn')}`;
+    playBtn.innerHTML = `${t('play_btn')} `;
 }
 
 function shakeElement(element) {
@@ -783,14 +1114,22 @@ function showStep(stepId) {
 }
 
 function initOnboarding() {
+    if (!onboardingView) return;
+
+    if (!ONBOARDING_CONFIG.enabled) {
+        localStorage.setItem('battly_setup_complete', 'true');
+        onboardingView.style.display = 'none';
+        return;
+    }
+
     const isSetupComplete = localStorage.getItem('battly_setup_complete');
 
     if (!isSetupComplete) {
         onboardingView.style.display = 'flex';
-        showStep('onboardingStep1');
+        showStep('onboardingStep2');
 
         const currentLang = localStorage.getItem('battly_lang') || 'es';
-        document.querySelector(`.lang-card[data-lang="${currentLang}"]`)?.classList.add('selected');
+        document.querySelector(`.lang - card[data - lang="${currentLang}"]`)?.classList.add('selected');
 
         const savedUser = localStorage.getItem('hytale_username');
         if (savedUser) {
@@ -802,7 +1141,7 @@ function initOnboarding() {
 
 function checkStep2Validity() {
     if (!btnToStep3) return;
-    const isUserValid = onboardingUser.value.trim().length > 0;
+    const isUserValid = sanitizeUsername(onboardingUser.value).length > 0;
     btnToStep3.disabled = !isUserValid;
 }
 
@@ -813,6 +1152,10 @@ function checkStep3Validity() {
 }
 
 if (onboardingView) {
+    if (!ONBOARDING_CONFIG.enabled) {
+        onboardingView.style.display = 'none';
+    }
+
     document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const nextId = btn.getAttribute('data-next');
@@ -824,26 +1167,20 @@ if (onboardingView) {
         btn.addEventListener('click', (e) => {
             const prevId = btn.getAttribute('data-prev');
             if (prevId) showStep(prevId);
-            else if (btn.closest('#onboardingStep2')) showStep('onboardingStep1');
-            else if (btn.closest('#onboardingStep3')) showStep('onboardingStep2');
         });
     });
 
-    langCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const lang = card.dataset.lang;
-            loadLocale(lang);
-            languageSelect.value = lang;
-            langCards.forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-        });
-    });
+
 
     if (onboardingUser) {
         onboardingUser.addEventListener('input', (e) => {
+            const sanitized = sanitizeUsername(e.target.value);
+            if (sanitized !== e.target.value) {
+                e.target.value = sanitized;
+            }
             checkStep2Validity();
             const usernameMain = document.getElementById('username');
-            if (usernameMain) usernameMain.value = e.target.value;
+            if (usernameMain) usernameMain.value = sanitized;
         });
     }
 
@@ -853,11 +1190,15 @@ if (onboardingView) {
 
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            const user = onboardingUser.value.trim();
+            const user = sanitizeUsername(onboardingUser.value);
             if (!user || !termsCheck.checked) return;
 
             localStorage.setItem('hytale_username', user);
             localStorage.setItem('battly_setup_complete', 'true');
+
+            originalUsername = user;
+            if (usernameInput) usernameInput.value = user;
+            if (confirmNameBtn) confirmNameBtn.classList.remove('visible');
 
             onboardingView.style.transition = 'opacity 0.5s ease';
             onboardingView.style.opacity = '0';
@@ -890,42 +1231,86 @@ const dialogCancelBtn = document.getElementById('dialogCancelBtn');
 
 function showCustomDialog(title, message, isQuestion = false) {
     return new Promise((resolve) => {
-        dialogTitle.textContent = title;
-        dialogMessage.textContent = message;
-
-        dialogConfirmBtn.textContent = 'Confirm';
-        dialogCancelBtn.textContent = 'Cancel';
-
-        if (typeof t === 'function') {
-            dialogConfirmBtn.textContent = isQuestion ? t('btn_confirm') || 'Yes' : t('btn_ok') || 'OK';
-            dialogCancelBtn.textContent = t('btn_cancel') || 'Cancel';
+        if (!customDialog) {
+            console.error("Custom Dialog element not found!");
+            resolve(false);
+            return;
         }
 
-        customDialog.style.display = 'flex';
-        void customDialog.offsetWidth;
+        if (dialogTitle) dialogTitle.textContent = title;
+        if (dialogMessage) dialogMessage.textContent = message;
+
+        if (dialogConfirmBtn) {
+            dialogConfirmBtn.textContent = 'Confirm';
+        }
+        if (dialogCancelBtn) {
+            dialogCancelBtn.textContent = 'Cancel';
+        }
+
+        try {
+            if (typeof t === 'function') {
+                if (dialogConfirmBtn) dialogConfirmBtn.textContent = isQuestion ? (t('btn_confirm') || 'Confirm') : (t('btn_ok') || 'OK');
+                if (dialogCancelBtn) dialogCancelBtn.textContent = t('btn_cancel') || 'Cancel';
+            }
+        } catch (e) {
+            console.error("Translation error in dialog:", e);
+        }
+
+        // Force visibility reset
+        // FIX: Z-Index 99999 para garantir que fique acima de tudo
+        customDialog.style.cssText = 'display: flex !important; opacity: 1 !important; z-index: 99999 !important; visibility: visible !important;';
         customDialog.classList.add('active');
 
         if (isQuestion) {
-            dialogCancelBtn.style.display = 'block';
+            if (dialogCancelBtn) dialogCancelBtn.style.display = 'block';
         } else {
-            dialogCancelBtn.style.display = 'none';
+            if (dialogCancelBtn) dialogCancelBtn.style.display = 'none';
         }
 
         const close = (result) => {
             customDialog.classList.remove('active');
+            customDialog.style.opacity = '0';
             setTimeout(() => {
                 customDialog.style.display = 'none';
             }, 300);
 
-            dialogConfirmBtn.onclick = null;
-            dialogCancelBtn.onclick = null;
+            if (dialogConfirmBtn) dialogConfirmBtn.onclick = null;
+            if (dialogCancelBtn) dialogCancelBtn.onclick = null;
             resolve(result);
         };
 
-        dialogConfirmBtn.onclick = () => close(true);
-        dialogCancelBtn.onclick = () => close(false);
+        if (dialogConfirmBtn) dialogConfirmBtn.onclick = () => close(true);
+        if (dialogCancelBtn) dialogCancelBtn.onclick = () => close(false);
     });
 }
 
-window.customAlert = (title, message) => showCustomDialog(title, message, false);
 window.customAsk = (title, message) => showCustomDialog(title, message, true);
+
+// Translation System
+async function loadLocale(lang) {
+    try {
+        const localeData = await fs.readFileSync(path.join(__dirname, 'locales', `${lang}.json`));
+        currentTranslations = JSON.parse(localeData);
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (currentTranslations[key]) {
+                el.innerText = currentTranslations[key];
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (currentTranslations[key]) {
+                el.placeholder = currentTranslations[key];
+            }
+        });
+    } catch (e) {
+        console.error("Error loading locale:", e);
+    }
+}
+
+function t(key) {
+    return currentTranslations[key] || key;
+}
+
+// Initial Load
+loadLocale(defaultLang);

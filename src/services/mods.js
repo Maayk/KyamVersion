@@ -3,14 +3,13 @@ const fs = require('fs-extra');
 const axios = require('axios');
 const { app, BrowserWindow } = require('electron');
 const { downloadFile } = require('./utils');
-const { _trackEvent } = require('../analytics');
 
 const CF_API_KEY = '$2a$10$S7nVFhQKpxteK4Fwf9yoxejmI.NjJiE53Qh4IeaDbIu/./oTM/MKa';
 const CF_API_URL = 'https://api.curseforge.com/v1';
 const GAME_ID = 70216;
 
 function registerModHandlers(ipcMain) {
-    const modsDir = path.join(app.getPath('appData'), 'Hytale', 'UserData', 'Mods');
+    const modsDir = path.join(app.getPath('appData'), 'Kyamtale', 'UserData', 'Mods');
 
     ipcMain.handle('search-mods', async (event, query = '') => {
         try {
@@ -103,7 +102,7 @@ function registerModHandlers(ipcMain) {
     ipcMain.handle('install-mod', async (event, modData) => {
         try {
             await fs.ensureDir(modsDir);
-            event.sender.send('launch-status', `Buscando última versión de ${modData.name}...`);
+            event.sender.send('launch-status', `Buscando atualizações para ${modData.name}...`);
 
             const headers = { 'x-api-key': CF_API_KEY, 'Accept': 'application/json' };
             const filesResponse = await axios.get(`${CF_API_URL}/mods/${modData.id}/files`, {
@@ -113,7 +112,7 @@ function registerModHandlers(ipcMain) {
 
             const files = filesResponse.data.data;
             if (!files || files.length === 0) {
-                throw new Error("No se encontraron archivos descargables para este mod.");
+                throw new Error("Nenhum arquivo descargável encontrado para este mod.");
             }
 
             const latestFile = files[0];
@@ -122,17 +121,11 @@ function registerModHandlers(ipcMain) {
             const destPath = path.join(modsDir, fileName);
 
             if (!downloadUrl) {
-                throw new Error("El archivo no tiene URL de descarga directa (probablemente externo).");
+                throw new Error("Nenhuma URL de download direta encontrada (provavelmente externo).");
             }
 
-            event.sender.send('launch-status', `Descargando ${fileName}...`);
+            event.sender.send('launch-status', `Baixando ${fileName}...`);
             await downloadFile(downloadUrl, destPath, event);
-
-            _trackEvent('mod_install', {
-                mod_id: modData.id,
-                mod_name: modData.name,
-                file_name: fileName
-            });
 
             return { success: true };
         } catch (error) {
@@ -148,10 +141,8 @@ function registerModHandlers(ipcMain) {
 
             if (fileName.endsWith('.disabled')) {
                 newPath = path.join(modsDir, fileName.replace('.disabled', ''));
-                _trackEvent('mod_enable', { mod_file: fileName });
             } else {
                 newPath = path.join(modsDir, fileName + '.disabled');
-                _trackEvent('mod_disable', { mod_file: fileName });
             }
 
             await fs.rename(oldPath, newPath);
@@ -163,7 +154,6 @@ function registerModHandlers(ipcMain) {
 
     ipcMain.handle('delete-mod', async (event, fileName) => {
         try {
-            _trackEvent('mod_delete', { mod_file: fileName });
             await fs.remove(path.join(modsDir, fileName));
             return { success: true };
         } catch (error) {

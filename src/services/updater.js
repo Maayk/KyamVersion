@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { _trackEvent } = require('../analytics');
 
 const GITHUB_USER = "1ly4s0";
 const GITHUB_REPO = "Battly4Hytale";
@@ -21,14 +20,9 @@ async function checkForUpdates(win) {
         console.log(`Current: ${currentVersion}, Remote: ${remoteVersion}`);
 
         if (compareVersions(remoteVersion, currentVersion) > 0) {
-            _trackEvent('update_available', {
-                current_version: currentVersion,
-                remote_version: remoteVersion
-            });
             win.webContents.send('update-available', launcherConfig);
         }
     } catch (e) {
-        _trackEvent('update_check_failed', { error: e.message });
         console.error('Failed to check for updates:', e.message);
     }
 }
