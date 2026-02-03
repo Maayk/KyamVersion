@@ -4,8 +4,8 @@ Fork modificado do [Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale) com 
 
 ![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-blue) ![Plataforma](https://img.shields.io/badge/Plataforma-Windows-lightgrey) ![Node](https://img.shields.io/badge/Node-20+-green)
 
-
 ![Preview do Launcher](https://i.ibb.co/Z6RLbpm3/image.png)
+
 ---
 
 ## Sobre
@@ -118,6 +118,14 @@ src/
 ---
 
 ## Solução de Problemas
+
+### Erro ao iniciar o canal Beta
+
+O canal Beta depende de arquivos base que são configurados durante a instalação do canal Latest. Se você tentar iniciar diretamente pelo Beta sem nunca ter executado o Latest, o launcher pode apresentar erros.
+
+**Solução**: Na primeira execução, mantenha o canal em **Latest** e clique em Jogar para completar o setup inicial. Após o jogo abrir pelo menos uma vez, você pode trocar para o canal **Beta** normalmente.
+
+### Outros problemas comuns
 
 - **403 ao baixar patches**: Verifique firewall/antivírus.
 - **Jogo não inicia**: Use Reparar Jogo nas configurações ou exclua manualmente `%AppData%/Kyamtale/install`.
