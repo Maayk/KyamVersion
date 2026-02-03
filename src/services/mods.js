@@ -5,8 +5,19 @@ const { app, BrowserWindow } = require('electron');
 const { downloadFile } = require('./utils');
 
 // Carrega configurações da API do config.json
-const configPath = path.join(app.getAppPath(), 'config.json');
-const config = fs.readJsonSync(configPath);
+// Em produção, o config.json está em resources/, em dev está na raiz
+function getConfigPath() {
+    const devPath = path.join(app.getAppPath(), 'config.json');
+    const prodPath = path.join(process.resourcesPath, 'config.json');
+
+    if (fs.existsSync(prodPath)) return prodPath;
+    if (fs.existsSync(devPath)) return devPath;
+
+    console.error('config.json não encontrado em:', devPath, 'ou', prodPath);
+    return devPath;
+}
+
+const config = fs.readJsonSync(getConfigPath());
 
 const CF_API_KEY = config.api?.curseforge_key || '';
 const CF_API_URL = config.api?.curseforge_url || 'https://api.curseforge.com/v1';
