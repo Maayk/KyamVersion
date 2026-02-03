@@ -1,4 +1,4 @@
-const { t } = require('./i18n');
+import { t } from './i18n.js';
 
 const customDialog = document.getElementById('customDialog');
 const dialogTitle = document.getElementById('dialogTitle');
@@ -63,7 +63,7 @@ function customAsk(title, message) {
     return showCustomDialog(title, message, true);
 }
 
-module.exports = {
+export {
     showCustomDialog,
     customAsk
 };

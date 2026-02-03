@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { app } = require('electron');
 const { execFile } = require('child_process');
-const { downloadFile } = require('./utils');
+const { downloadFile, verifyFileHash } = require('./utils');
 const StreamZip = require('node-stream-zip');
 const os = require('os');
 const { fileURLToPath } = require('url');
@@ -397,7 +397,14 @@ async function updateGameFiles(gameDir, event, channel) {
 
         try {
             console.log(`Attempting download: ${CONFIG.primaryPatch}`);
+            console.log(`Attempting download: ${CONFIG.primaryPatch}`);
             await downloadFile(patchUrlBase + CONFIG.primaryPatch, targetPatchFile, event);
+
+            // TODO: Adicionar hash conhecido para 4.pwr quando possível para aumentar segurança
+            // const knownHash = "HASH_DO_ARQUIVO_4_PWR";
+            // if (!await verifyFileHash(targetPatchFile, knownHash, 'sha256')) {
+            //      throw new Error("Hash verification failed for game patch");
+            // }
         } catch (err) {
             console.error(`Download failed for ${CONFIG.primaryPatch}, attempting fallback...`, err.message);
 

@@ -20,7 +20,7 @@ function shakeElement(element) {
     });
 }
 
-module.exports = {
+export {
     ONBOARDING_CONFIG,
     sanitizeUsername,
     shakeElement

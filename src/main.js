@@ -235,6 +235,18 @@ ipcMain.handle('get-gpu-info', async () => {
     return await loadGpuInfo();
 });
 
+ipcMain.handle('load-locale', async (event, lang) => {
+    const localePath = path.join(__dirname, 'locales', `${lang}.json`);
+    try {
+        if (await fs.pathExists(localePath)) {
+            return await fs.readJson(localePath);
+        }
+    } catch (e) {
+        console.error("Failed to load locale:", e);
+    }
+    return null;
+});
+
 ipcMain.handle('select-java-path', async () => {
     const result = await dialog.showOpenDialog({
         properties: ['openFile'],
@@ -288,8 +300,8 @@ function createSplashWindow() {
         center: true,
         icon: path.join(__dirname, 'assets/images/logo.png'),
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
+            nodeIntegration: false,
+            contextIsolation: true
         }
     });
 
@@ -307,9 +319,10 @@ function createMainWindow() {
         minHeight: 540,
         icon: path.join(__dirname, 'assets/images/logo.png'),
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            webSecurity: false
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: true, // Habilitado para segurança
+            preload: path.join(__dirname, 'preload.js')
         },
         resizable: true,
         title: "Battly Launcher 4 Hytale",
@@ -372,5 +385,11 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.on('launch-game', (event, username) => {
+    // Sanitização básica do servidor para evitar injeção de comandos
+    if (typeof username !== 'string' || !username.match(/^[a-zA-Z0-9_]{1,16}$/)) {
+        console.error("Tentativa de lançamento com username inválido:", username);
+        event.reply('launch-error', 'Username inválido (apenas letras, números e underline, max 16 chars).');
+        return;
+    }
     launchGame(event, username);
 });

@@ -1,12 +1,8 @@
-const { ipcRenderer } = require('electron');
-const path = require('path');
-const fs = require('fs');
-
-// Módulos extraídos
-const { ONBOARDING_CONFIG, sanitizeUsername, shakeElement } = require('./renderer/utils');
-const { getSavedLang, loadLocale, t, applyTranslations, AVAILABLE_LANGS, defaultLang } = require('./renderer/i18n');
-const { showCustomDialog, customAsk } = require('./renderer/dialog');
-const { loadNews } = require('./renderer/news');
+import { ONBOARDING_CONFIG, sanitizeUsername, shakeElement } from './renderer/utils.js';
+import { getSavedLang, loadLocale, t, applyTranslations, AVAILABLE_LANGS, defaultLang } from './renderer/i18n.js';
+import { showCustomDialog, customAsk } from './renderer/dialog.js';
+import { loadNews } from './renderer/news.js';
+import DOMPurify from './renderer/libs/purify.js';
 
 // Configurações
 const SETTINGS_CONFIG = {
@@ -15,11 +11,11 @@ const SETTINGS_CONFIG = {
 };
 
 document.getElementById('minBtn').addEventListener('click', () => {
-    ipcRenderer.send('minimize-window');
+    window.api.send('minimize-window');
 });
 
 document.getElementById('closeBtn').addEventListener('click', () => {
-    ipcRenderer.send('close-window');
+    window.api.send('close-window');
 });
 
 const settingsBtn = document.getElementById('settingsBtn');
@@ -28,7 +24,7 @@ const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const hideLauncherCheck = document.getElementById('hideLauncherCheck');
 
 hideLauncherCheck.addEventListener('change', async (e) => {
-    await ipcRenderer.invoke('save-settings', { hideLauncher: e.target.checked });
+    await window.api.invoke('save-settings', { hideLauncher: e.target.checked });
 });
 
 
@@ -167,7 +163,7 @@ const updateHomeGameVersion = () => {
 
 const loadGameVersion = async (channel) => {
     try {
-        const version = await ipcRenderer.invoke('get-hytale-version', channel);
+        const version = await window.api.invoke('get-hytale-version', channel);
         if (typeof version === 'string' && version.trim()) {
             currentGameVersion = version.trim();
         }
@@ -178,7 +174,7 @@ const loadGameVersion = async (channel) => {
 };
 
 const syncGameChannel = async () => {
-    currentSettingsData = await ipcRenderer.invoke('get-settings');
+    currentSettingsData = await window.api.invoke('get-settings');
     const channel = normalizeGameChannel(currentSettingsData.gameChannel);
     if (homeGameChannel) homeGameChannel.value = channel;
     if (gameChannelSelect) gameChannelSelect.value = channel;
@@ -254,13 +250,13 @@ if (useCustomJavaCheck) {
 
 if (openLocationBtn) {
     openLocationBtn.addEventListener('click', () => {
-        ipcRenderer.send('open-game-location');
+        window.api.send('open-game-location');
     });
 }
 
 if (browseJavaBtn) {
     browseJavaBtn.addEventListener('click', async () => {
-        const path = await ipcRenderer.invoke('select-java-path');
+        const path = await window.api.invoke('select-java-path');
         if (path) {
             javaPathInput.value = path;
         }
@@ -290,7 +286,7 @@ if (repairGameBtn) {
         const confirmed = await showCustomDialog(t('repair_confirm_title'), t('repair_confirm_msg'), true);
         if (confirmed) {
             const selectedChannel = normalizeGameChannel(homeGameChannel ? homeGameChannel.value : currentSettingsData.gameChannel);
-            ipcRenderer.send('repair-game', selectedChannel);
+            window.api.send('repair-game', selectedChannel);
             statusMsg.textContent = t('repair_started');
             settingsModal.classList.remove('active');
         }
@@ -302,17 +298,17 @@ if (homeGameChannel) {
         const selectedChannel = normalizeGameChannel(e.target.value);
         e.target.value = selectedChannel;
         if (!currentSettingsData || !Object.keys(currentSettingsData).length) {
-            currentSettingsData = await ipcRenderer.invoke('get-settings');
+            currentSettingsData = await window.api.invoke('get-settings');
         }
         currentSettingsData = { ...currentSettingsData, gameChannel: selectedChannel };
-        await ipcRenderer.invoke('save-settings', currentSettingsData);
+        await window.api.invoke('save-settings', currentSettingsData);
         await loadGameVersion(selectedChannel);
     });
 }
 
 if (settingsBtn) {
     settingsBtn.addEventListener('click', async () => {
-        currentSettingsData = await ipcRenderer.invoke('get-settings');
+        currentSettingsData = await window.api.invoke('get-settings');
 
         if (settingsPlayerName) settingsPlayerName.value = usernameInput.value || currentSettingsData.playerName || '';
         if (hideLauncherCheck) hideLauncherCheck.checked = currentSettingsData.hideLauncher || false;
@@ -326,7 +322,7 @@ if (settingsBtn) {
         });
 
         try {
-            const gpuData = await ipcRenderer.invoke('get-gpu-info');
+            const gpuData = await window.api.invoke('get-gpu-info');
             if (typeof gpuData === 'object') {
                 detectedGpus = gpuData;
             } else {
@@ -368,11 +364,11 @@ if (closeSettingsBtn) {
             localStorage.setItem('hytale_username', settingsPlayerName.value);
         }
 
-        await ipcRenderer.invoke('save-settings', newSettings);
+        await window.api.invoke('save-settings', newSettings);
     });
 }
 
-ipcRenderer.on('repair-complete', (event, result) => {
+window.api.on('repair-complete', (event, result) => {
     if (result.success) {
         showCustomDialog(t('success'), t('repair_success_msg'), false);
         const selectedChannel = normalizeGameChannel(homeGameChannel ? homeGameChannel.value : currentSettingsData.gameChannel);
@@ -417,12 +413,12 @@ playBtn.addEventListener('click', () => {
     playBtn.querySelector('i')?.remove(); // Remove ícones anteriores se houver
     playBtn.textContent = t('status_running_btn'); // Texto mais limpo no botão
 
-    ipcRenderer.send('launch-game', username);
+    window.api.send('launch-game', username);
 });
 
 
 // Handlers de Lançamento/Saída do Jogo
-ipcRenderer.on('launch-success', (event, message) => {
+window.api.on('launch-success', (event, message) => {
     // Se a mensagem for "Juego terminado", significa que o jogo fechou
     if (message === 'Juego terminado' || message === 'Game finished') {
         playBtn.disabled = false;
@@ -441,7 +437,7 @@ ipcRenderer.on('launch-success', (event, message) => {
     }
 });
 
-ipcRenderer.on('launch-error', (event, message) => {
+window.api.on('launch-error', (event, message) => {
     playBtn.disabled = false;
     playBtn.style.opacity = "1";
     playBtn.textContent = t('play_btn');
@@ -449,7 +445,7 @@ ipcRenderer.on('launch-error', (event, message) => {
     logActivity(`${t('status_error')} ${message}`, 'error');
 });
 
-ipcRenderer.on('launch-status', (event, message) => {
+window.api.on('launch-status', (event, message) => {
     if (message) {
         logActivity(message, 'info');
     }
@@ -519,8 +515,8 @@ async function loadPopularMods(query = '') {
     try {
         // Busca mods e lista de instalados em paralelo
         const [modsResult, installedResult] = await Promise.all([
-            ipcRenderer.invoke('search-mods', query),
-            ipcRenderer.invoke('list-installed-mods')
+            window.api.invoke('search-mods', query),
+            window.api.invoke('list-installed-mods')
         ]);
 
         const installedMods = installedResult.success ? installedResult.data : [];
@@ -661,7 +657,7 @@ window.installMod = async (modId, modName, btnElement) => {
     progressBar.style.width = '0%';
 
     try {
-        const result = await ipcRenderer.invoke('install-mod', { id: modId, name: modName });
+        const result = await window.api.invoke('install-mod', { id: modId, name: modName });
 
         // Esconde a barra de progresso quando termina
         progressContainer.style.display = 'none';
@@ -747,10 +743,10 @@ function openModModal(mod) {
 
     modalElements.description.innerHTML = '<p style="color: #666;">...</p>';
 
-    ipcRenderer.invoke('get-mod-description', mod.id).then(result => {
+    window.api.invoke('get-mod-description', mod.id).then(result => {
         if (currentModalMod && currentModalMod.id === mod.id) {
             if (result.success && result.data) {
-                modalElements.description.innerHTML = result.data;
+                modalElements.description.innerHTML = DOMPurify.sanitize(result.data);
             } else {
                 modalElements.description.textContent = mod.summary || t('modal_about');
             }
@@ -784,7 +780,7 @@ modalInstallBtn.addEventListener('click', () => {
 async function loadInstalledMods() {
     installedList.innerHTML = '<div class="loading-spinner">...</div>';
 
-    const result = await ipcRenderer.invoke('list-installed-mods');
+    const result = await window.api.invoke('list-installed-mods');
 
     if (result.success) {
         renderInstalledMods(result.data);
@@ -843,7 +839,7 @@ function renderInstalledMods(mods) {
 
 window.toggleMod = async (fileName) => {
     try {
-        await ipcRenderer.invoke('toggle-mod', fileName);
+        await window.api.invoke('toggle-mod', fileName);
         loadInstalledMods();
     } catch (e) {
         console.error("Toggle error:", e);
@@ -865,7 +861,7 @@ window.deleteMod = async (fileName) => {
     if (confirmed) {
         console.log('Confirmed delete for:', fileName);
         try {
-            await ipcRenderer.invoke('delete-mod', fileName);
+            await window.api.invoke('delete-mod', fileName);
             loadInstalledMods();
         } catch (e) {
             console.error("IPC delete failed:", e);
@@ -876,19 +872,19 @@ window.deleteMod = async (fileName) => {
     }
 };
 
-ipcRenderer.on('launch-error', (event, message) => {
+window.api.on('launch-error', (event, message) => {
     statusMsg.textContent = `${t('status_error')} ${message} `;
     statusMsg.style.color = "#ff4444";
     progressContainer.style.display = 'none';
     resetPlayBtn();
 });
 
-ipcRenderer.on('launch-status', (event, message) => {
+window.api.on('launch-status', (event, message) => {
     statusMsg.textContent = t(message);
     statusMsg.style.color = "#00d9ff";
 });
 
-ipcRenderer.on('download-progress', (event, data) => {
+window.api.on('download-progress', (event, data) => {
     progressContainer.style.display = 'block';
 
     let percent = 0;
@@ -917,7 +913,7 @@ ipcRenderer.on('download-progress', (event, data) => {
     statusMsg.style.display = 'block';
 });
 
-ipcRenderer.on('launch-success', (event, message) => {
+window.api.on('launch-success', (event, message) => {
     statusMsg.textContent = t('status_running');
     statusMsg.style.color = "#4caf50";
     progressContainer.style.display = 'none';
@@ -928,13 +924,13 @@ ipcRenderer.on('launch-success', (event, message) => {
     }, 5000);
 });
 
-// ipcRenderer.on('update-available', async (event, remoteConfig) => {
+// window.api.on('update-available', async (event, remoteConfig) => {
 //     console.log("Update available:", remoteConfig);
 //     const title = t('update_available_title') || "Update Available";
 //     const msg = (t('update_available_msg') || "A new version {v} is available. Update now?").replace('{v}', remoteConfig.version);
 //
 //     if (await customAsk(title, msg)) {
-//         ipcRenderer.invoke('perform-update', remoteConfig.downloadUrl);
+//         window.api.invoke('perform-update', remoteConfig.downloadUrl);
 //     }
 // }); // Desativado: launcher modificado não deve auto-atualizar
 
@@ -1064,8 +1060,8 @@ if (onboardingView) {
             e.preventDefault();
             const url = link.getAttribute('data-url');
             if (url) {
-                const { shell } = require('electron');
-                shell.openExternal(url);
+                // const { shell } = require('electron');
+                window.api.openExternal(url);
             }
         });
     });

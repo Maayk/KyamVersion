@@ -143,6 +143,28 @@ function registerModHandlers(ipcMain) {
             event.sender.send('launch-status', `Baixando ${fileName}...`);
             await downloadFile(downloadUrl, destPath, event);
 
+            // Verificação de Hash (SHA1)
+            // A API do CurseForge geralmente retorna hashes.
+            // Precisamos pegar o hash do arquivo 'latestFile'
+            // Exemplo structure: latestFile.hashes = [{value: "...", algo: 1}] (alice=1 é SHA1)
+
+            let expectedHash = null;
+            if (latestFile.hashes && Array.isArray(latestFile.hashes)) {
+                const sha1Obj = latestFile.hashes.find(h => h.algo === 1);
+                if (sha1Obj) expectedHash = sha1Obj.value;
+            }
+
+            if (expectedHash) {
+                event.sender.send('launch-status', `Verificando integridade...`);
+                const { verifyFileHash } = require('./utils');
+                const isValid = await verifyFileHash(destPath, expectedHash, 'sha1');
+
+                if (!isValid) {
+                    await fs.remove(destPath); // Remove arquivo corrompido
+                    throw new Error("Falha na verificação de hash. O arquivo pode estar corrompido.");
+                }
+            }
+
             return { success: true };
         } catch (error) {
             console.error(error);

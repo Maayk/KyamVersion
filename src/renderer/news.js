@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+import DOMPurify from './libs/purify.js';
 
 let newsData = [];
 let currentHeroIndex = 0;
@@ -10,7 +10,7 @@ async function loadNews() {
     const heroReadMore = document.getElementById('heroReadMore');
 
     try {
-        newsData = await ipcRenderer.invoke('get-news');
+        newsData = await window.api.invoke('get-news');
 
         if (!newsData || newsData.length === 0) {
             heroTitle.textContent = 'Sem notícias disponíveis';
@@ -31,7 +31,7 @@ async function loadNews() {
             card.innerHTML = `
                 <div class="news-card-image" style="background-image: url('${bgImage}')"></div>
                 <div class="news-card-content">
-                    <p class="news-card-title">${item.title}</p>
+                    <p class="news-card-title">${DOMPurify.sanitize(item.title)}</p>
                 </div>
             `;
 
@@ -65,7 +65,7 @@ async function loadNews() {
             heroReadMore.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (newsData[currentHeroIndex]?.link) {
-                    require('electron').shell.openExternal(newsData[currentHeroIndex].link);
+                    window.api.openExternal(newsData[currentHeroIndex].link);
                 }
             });
         }
@@ -108,7 +108,7 @@ function updateHero(index) {
     heroDescription.textContent = item.summary || 'Sua aventura começa aqui';
 }
 
-module.exports = {
+export {
     loadNews,
     updateHero,
     updateNavDots

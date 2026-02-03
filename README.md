@@ -67,6 +67,27 @@ universal-analytics
 | **API key centralizada** | Chave CurseForge movida para `config.json` |
 
 ---
+---
+
+## Segurança e Arquitetura
+
+Este fork implementa correções críticas de segurança baseadas nas vulnerabilidades reportadas em [Issue #1](https://github.com/1ly4s0/Battly4Hytale/issues/1), adotando um modelo de segurança "Sandboxed" moderno.
+
+### Proteções Implementadas
+
+| Vulnerabilidade | Solução Adotada |
+|-----------------|-----------------|
+| **RCE via XSS** | **HTML Sanitization**: Todo conteúdo remoto (notícias, descrição de mods) é processado pelo `DOMPurify` antes de ser renderizado. Scripts maliciosos são removidos automaticamente. |
+| **Node Integration** | **Desativado**: O processo de renderização (interface) não tem mais acesso às APIs do Node.js (`require('fs')`, etc.), impedindo que comprometimentos da UI afetem o sistema. |
+| **Context Isolation** | **Ativado**: A comunicação entre UI e Sistema é feita exclusivamente via `ContextBridge` e IPC seguro (`window.api`), sem expor objetos internos do Electron. |
+| **Integridade de Mods** | **Verificação de Hash**: Todos os mods baixados da CurseForge têm seu hash SHA1 verificado contra a API oficial. Arquivos corrompidos ou adulterados no trânsito são rejeitados. |
+
+### Arquitetura IPC
+
+A aplicação foi refatorada para usar ES Modules (`import/export`) no frontend, abandonando o padrão antigo inseguro de CommonJS no navegador. 
+O acesso a recursos sensíveis (como sistema de arquivos) é restrito ao **Processo Principal**, exposto apenas através de canais permitidos (Allowlist) no `preload.js`.
+
+---
 
 ## Requisitos
 

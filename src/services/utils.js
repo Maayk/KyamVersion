@@ -58,4 +58,20 @@ async function downloadFile(url, dest, event) {
     });
 }
 
-module.exports = { downloadFile };
+function verifyFileHash(filePath, expectedHash, algorithm = 'sha1') {
+    if (!expectedHash) return true;
+
+    return new Promise((resolve, reject) => {
+        const hash = require('crypto').createHash(algorithm);
+        const stream = fs.createReadStream(filePath);
+
+        stream.on('error', err => reject(err));
+        stream.on('data', chunk => hash.update(chunk));
+        stream.on('end', () => {
+            const calculated = hash.digest('hex');
+            resolve(calculated.toLowerCase() === expectedHash.toLowerCase());
+        });
+    });
+}
+
+module.exports = { downloadFile, verifyFileHash };

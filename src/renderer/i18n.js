@@ -1,6 +1,3 @@
-const path = require('path');
-const fs = require('fs');
-
 let currentTranslations = {};
 const AVAILABLE_LANGS = ['en', 'es', 'pt', 'de', 'fr', 'zh', 'ru', 'ja'];
 const defaultLang = 'pt';
@@ -12,15 +9,15 @@ const getSavedLang = () => {
 
 async function loadLocale(lang) {
     try {
-        const localePath = path.join(__dirname, '..', 'locales', `${lang}.json`);
-        console.log(`Loading locale from: ${localePath}`);
-        if (fs.existsSync(localePath)) {
-            const data = fs.readFileSync(localePath, 'utf8');
-            currentTranslations = JSON.parse(data);
+        console.log(`Loading locale: ${lang}`);
+        const data = await window.api.invoke('load-locale', lang);
+
+        if (data) {
+            currentTranslations = data;
             localStorage.setItem('battly_lang', lang);
             applyTranslations();
         } else {
-            console.error(`Locale ${lang} not found at ${localePath}`);
+            console.error(`Locale ${lang} not found.`);
         }
     } catch (e) {
         console.error('Error loading locale:', e);
@@ -52,7 +49,7 @@ function applyTranslations(playBtn = null) {
     if (playBtn && !playBtn.disabled) playBtn.innerHTML = t('play_btn');
 }
 
-module.exports = {
+export {
     AVAILABLE_LANGS,
     defaultLang,
     getSavedLang,

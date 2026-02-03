@@ -38,6 +38,7 @@
     "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
     "axios": "^1.13.2",
+    "dompurify": "^3.3.1",
     "fs-extra": "^11.3.3",
     "node-localstorage": "^3.0.5",
     "node-stream-zip": "^1.15.0",
