@@ -1,82 +1,135 @@
-# Battly Launcher for Hytale
+# KyamTale Launcher
 
-Lanzador de código abierto para Hytale con soporte de mods, gestión de parches cliente/servidor y UX simplificada.
+Fork modificado do [Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale) com foco em privacidade, compatibilidade com versões recentes do client e interface customizada.
 
-![Estado](https://img.shields.io/badge/Estado-Beta-blue) ![Plataforma](https://img.shields.io/badge/Plataforma-Windows-lightgrey)
-
----
-## Resumen
-Battly automatiza la descarga del cliente, aplica parches para conectarse a servidores comunitarios, instala mods y muestra noticias oficiales. Usa Electron: proceso **Main** para orquestación y proceso **Renderer** para la UI.
-
-### Características clave
-- Parcheo binario automático del cliente (dominios y parches `.pwr`) con fallback de mirrors.
-- Patcher para servidores (`HytaleServer.jar`) compatible con dominios personalizados.
-- Gestor de mods con búsqueda e instalación en un clic (CurseForge).
-- Noticias in-app desde el feed oficial.
-- Multilenguaje (ES/EN/FR, ampliable vía `src/locales/`).
-- Telemetría ligera con Aptabase (sin `systeminformation` pesado).
-
-### Stack
-- **Runtime**: Electron + Node.js 18+
-- **UI**: HTML/CSS/JS (renderer), i18n con JSON.
-- **Herramientas**: Butler (itch.io) para aplicar parches `.pwr`, AdmZip para JARs.
+![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-blue) ![Plataforma](https://img.shields.io/badge/Plataforma-Windows-lightgrey) ![Node](https://img.shields.io/badge/Node-20+-green)
 
 ---
+
+## Sobre
+
+O KyamTale Launcher é um fork do Battly Launcher com modificações estruturais. Mantém a proposta central (download, patching e gestão de mods para Hytale), mas com remoção de telemetria, suporte a múltiplos canais de jogo e melhorias no processo de reparo.
+
+---
+
+## Diferencias em Relação ao Projeto Original
+
+### O que foi removido
+
+| Recurso Removido | Descrição |
+|------------------|-----------|
+| Telemetria Aptabase | O original usa `@aptabase/electron` para analytics. Este fork removeu completamente. |
+| Universal Analytics | O original inclui `universal-analytics` como dependência. Removido neste fork. |
+| Discord RPC | O original tem integração com Discord Rich Presence (`discord-rpc`, `@kostya-main/discord-rpc`). Este fork não possui. |
+| Auto-update | O original verifica e aplica updates automaticamente. Este fork desativou essa funcionalidade. |
+
+O arquivo `src/analytics.js` neste fork contém apenas stubs vazios que não enviam nenhum dado.
+
+### O que foi adicionado ou modificado
+
+| Recurso | Original | Este Fork |
+|---------|----------|-----------|
+| **Pasta de dados** | `%AppData%/Hytale` | `%AppData%/Kyamtale` |
+| **Canais de jogo** | Apenas `latest` | `latest` e `beta` (selecionável na interface) |
+| **Idiomas** | 3 (ES, EN, FR) | 8 (EN, ES, PT, FR, DE, RU, JA, ZH) |
+| **UUID do jogador** | Gerado a cada sessão | Persistido entre sessões (salvo em config) |
+| **Processo de reparo** | Remove pasta diretamente | Retry com fallback, stop de processos, pending delete |
+| **Node.js target** | 20+ | 20+ (igual) |
+
+### Arquivos novos ou modificados significativamente
+
+- `src/services/javaManager.js` - Novo. Gerencia download e extração automática de JRE quando necessário.
+- `src/main.js` - Refatorado com constantes `GAME_CONFIG`, `VERSION_CONFIG`, `REPAIR_CONFIG`. Suporte a múltiplos canais.
+- `src/services/game.js` - Modificado para usar `Kyamtale` como pasta base e suportar seleção de canal.
+- `src/analytics.js` - Substituído por stubs vazios (sem envio de dados).
+- `src/locales/` - Adicionados: `de.json`, `ja.json`, `ru.json`, `zh.json`.
+- `config.json` - Configuração com URLs para canais `latest` e `beta`.
+
+### Dependências removidas
+
+As seguintes dependências presentes no original foram removidas:
+
+```
+@aptabase/electron
+@kostya-main/discord-rpc
+discord-rpc
+universal-analytics
+```
+
+---
+
 ## Requisitos
+
 - Windows 10/11 x64
-- Node.js 18 o superior
-- Conexión a Internet (descarga inicial de assets/parches)
+- Node.js 20 ou superior
+- Conexão com a Internet
 
 ---
-## Instalación (desarrollo)
+
+## Instalação (desenvolvimento)
+
 ```bash
-git clone https://github.com/1ly4s0/Battly4Hytale.git
-cd Battly4Hytale
+git clone <repositório>
+cd <pasta-do-projeto>
 npm install
 npm start
 ```
 
-Scripts útiles:
-- `npm start` — modo desarrollo.
-- `npm run build` — genera instalador en `dist/`.
+Scripts:
+- `npm start` - Modo desenvolvimento.
+- `npm run build` - Gera binário portable em `dist/`.
 
 ---
-## Estructura rápida
+
+## Estrutura do Projeto
+
 ```
 src/
-├─ main.js, renderer.js
-├─ index.html, style.css, splash.html
-├─ analytics.js
-├─ services/ (game, patcher, serverPatcher, mods, news, updater, config, utils)
-├─ locales/        # traducciones
-├─ assets/, images/
-docs/ARCHITECTURE.md
+├── main.js               # Processo Main (IPC, janelas)
+├── renderer.js           # UI / DOM
+├── analytics.js          # Stubs vazios (sem telemetria)
+├── index.html / style.css / splash.html
+├── services/
+│   ├── game.js           # Orquestração de launch/patch
+│   ├── patcher.js        # Patch de client
+│   ├── serverPatcher.js  # Patch de JAR servidor
+│   ├── javaManager.js    # Download automático de JRE
+│   ├── mods.js           # CurseForge API + gestão local
+│   ├── news.js           # Feed oficial Hytale
+│   ├── updater.js        # Leitura de config remota (update desativado)
+│   ├── config.js         # Persistência de configurações
+│   └── utils.js          # Helpers de rede/FS
+├── locales/              # 8 idiomas
+└── assets/, images/
 ```
 
-Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+---
+
+## Uso
+
+1. Execute `npm start`.
+2. Insira seu nome de jogador.
+3. Escolha o canal de jogo (Latest ou Beta) e clique em **Jogar**.
+4. Para mods, acesse a aba Mods no topo.
+5. Configurações (GPU, Java, reparo) estão no ícone de engrenagem.
 
 ---
-## Uso básico
-1) Ejecuta `npm start`.  
-2) Introduce tu nombre de jugador y elige preferencia de GPU si aplica.  
-3) Pulsa **Play**: el launcher descargará parches, aplicará modificaciones y lanzará Hytale.  
-4) Para mods, abre la pestaña Mods, busca e instala.  
-5) El botón de reparación borra la instalación y fuerza reinstalación limpia.
+
+## Solução de Problemas
+
+- **403 ao baixar patches**: Verifique firewall/antivírus.
+- **Jogo não inicia**: Use Reparar Jogo nas configurações ou exclua manualmente `%AppData%/Kyamtale/install`.
+- **GPU não detectada**: A detecção usa `wmic`. Selecione manualmente se necessário.
 
 ---
-## Solución de problemas
-- **403 al descargar parches**: asegúrate de usar la versión más reciente; las peticiones llevan `User-Agent` de navegador para evitar bloqueos de CDN.  
-- **El juego no inicia**: usa la opción “Reparar juego” o borra `%AppData%/Hytale/install/release`.  
-- **GPU no detectada**: la detección usa `wmic`; si no está disponible, selecciona GPU manualmente o deja en automático.  
-- **Noticias vacías**: el feed puede cambiar formato; el launcher muestra mensaje de error pero el resto funciona.
+
+## Créditos
+
+- Projeto base: [1ly4s0/Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale)
 
 ---
-## Contribuir
-- Issues y PRs son bienvenidos.  
-- Sigue las convenciones de lint/estilo del proyecto.  
-- Para nuevas funciones, documenta en `docs/ARCHITECTURE.md` y añade claves i18n si corresponde.
 
----
-## Licencia
+## Licença
+
 ISC.  
-Hytale es una marca registrada de Hypixel Studios; este launcher no está afiliado.
+Hytale é marca registrada da Hypixel Studios. Este launcher não possui afiliação oficial.
