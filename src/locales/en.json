@@ -65,8 +65,8 @@
   "setting_game_channel_desc": "Select installed version",
   "home_channel_label": "Channel",
   "home_version_label": "Version",
-  "game_channel_latest": "Latest",
-  "game_channel_beta": "Beta",
+  "game_channel_legacy": "Legacy",
+  "game_channel_current": "Current",
   "java_path_label": "Java Executable Path",
   "java_browse": "Browse",
   "java_path_desc": "Select the Java installation folder (supports Windows, Mac, Linux)",
@@ -80,5 +80,11 @@
   "player_name_desc": "This name will be used in-game (1-16 characters)",
   "repair_confirm_title": "Repair Game",
   "repair_confirm_msg": "Are you sure? This will verify and re-download game files.",
-  "repair_started": "Repair started..."
+  "repair_started": "Repair started...",
+  "btn_read_more": "READ MORE",
+  "news_section_title": "MORE NEWS",
+  "error_name_required": "Name required",
+  "status_running_btn": "RUNNING...",
+  "status_session_ended": "Game session ended",
+  "status_game_started": "Game started successfully!"
 }

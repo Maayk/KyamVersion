@@ -28,6 +28,18 @@
         </div>
 
         <div class="window-controls">
+            <div class="language-selector">
+                <select id="langSelect" class="lang-dropdown" title="Idioma">
+                    <option value="en">🇺🇸 EN</option>
+                    <option value="es">🇪🇸 ES</option>
+                    <option value="pt">🇧🇷 PT</option>
+                    <option value="de">🇩🇪 DE</option>
+                    <option value="fr">🇫🇷 FR</option>
+                    <option value="zh">🇨🇳 ZH</option>
+                    <option value="ru">🇷🇺 RU</option>
+                    <option value="ja">🇯🇵 JA</option>
+                </select>
+            </div>
             <button id="modsBtn" class="control-btn" title="Mods"><i class="fas fa-puzzle-piece"></i></button>
             <button id="settingsBtn" class="control-btn" title="Configuração"><i class="fas fa-cog"></i></button>
             <button id="minBtn" class="control-btn" title="Minimizar"><i class="fas fa-minus"></i></button>
@@ -35,122 +47,143 @@
         </div>
     </div>
 
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content medium-modal">
-            <button class="modal-close-btn" id="closeSettingsBtn">&times;</button>
-            <h2 data-i18n="settings_title">Configuración</h2>
+    <div id="settingsModal" class="settings-overlay">
+        <div class="settings-container">
+            <!-- Header -->
+            <div class="settings-header">
+                <h2 class="settings-title" data-i18n="settings_title">Configurações</h2>
+                <button class="settings-close-btn" id="closeSettingsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
+            <!-- Tabs -->
             <div class="settings-tabs">
                 <button class="settings-tab active" data-tab="general" data-i18n="settings_tab_general">Geral</button>
-                <button class="settings-tab" data-tab="java" data-i18n="settings_tab_java">Java Update</button>
+                <button class="settings-tab" data-tab="java" data-i18n="settings_tab_java">Java</button>
             </div>
 
-            <div id="settings-general" class="settings-page active">
-                <div class="settings-option">
-                    <span class="setting-label" data-i18n="player_name">Player Name</span>
-                    <input type="text" id="settingsPlayerName" class="simple-input" style="width: 50%;">
-                </div>
-                <div class="settings-desc" style="margin-bottom: 20px; color: #888; font-size: 0.8rem;"
-                    data-i18n="player_name_desc">This name will be used in-game</div>
-
-                <div class="settings-option">
-                    <div style="display:flex; align-items:center; gap: 10px;">
-                        <i class="fas fa-folder-open" style="color: #6a6a6a; font-size: 1.2rem;"></i>
-                        <div>
-                            <span class="setting-label" style="display:block;" data-i18n="btn_open_location">Open Game
-                                Location</span>
-                            <small style="color: #666;" data-i18n="open_location_desc">Open the game installation
-                                folder</small>
-                        </div>
-                    </div>
-                    <button id="openLocationBtn" class="action-btn secondary-btn small-btn" style="border: none;"><i
-                            class="fas fa-external-link-alt"></i></button>
-                </div>
-
-                <div class="settings-option">
-                    <div style="display:flex; align-items:center; gap: 10px;">
-                        <i class="fas fa-tools" style="color: #6a6a6a; font-size: 1.2rem;"></i>
-                        <div>
-                            <span class="setting-label" style="display:block;" data-i18n="setting_repair">Reparar
-                                Juego</span>
-                            <small style="color: #666;" data-i18n="repair_desc">Reinstall game files</small>
-                        </div>
-                    </div>
-                    <button id="repairGameBtn" class="action-btn secondary-btn small-btn" style="border: none;"><i
-                            class="fas fa-sync"></i></button>
-                </div>
-
-                <div style="margin-top: 20px;">
-                    <div class="settings-option">
-                        <span class="setting-label" data-i18n="setting_gpu">Preferencia GPU</span>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="gpu-btn active" data-val="auto">AUTO</button>
-                            <button class="gpu-btn" data-val="integrated">INTEGRATED</button>
-                            <button class="gpu-btn" data-val="dedicated">DEDICATED</button>
+            <!-- Content -->
+            <div class="settings-content">
+                <!-- Tab Geral -->
+                <div id="settings-general" class="settings-page active">
+                    <!-- Player Name -->
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="player_name">Nome do Jogador</span>
+                                <span class="settings-item-desc" data-i18n="player_name_desc">Este nome será usado no
+                                    jogo (1-16 caracteres)</span>
+                            </div>
+                            <input type="text" id="settingsPlayerName" class="settings-input" maxlength="16">
                         </div>
                     </div>
 
-                </div>
+                    <!-- Actions -->
+                    <div class="settings-group">
+                        <div class="settings-item clickable" id="openLocationBtn">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="btn_open_location">Abrir Pasta do
+                                    Jogo</span>
+                                <span class="settings-item-desc" data-i18n="open_location_desc">Abrir a pasta de
+                                    instalação do jogo</span>
+                            </div>
+                            <div class="settings-item-action">
+                                <i class="fas fa-external-link-alt"></i>
+                            </div>
+                        </div>
 
-                <div class="settings-option" style="margin-top: 20px;">
-                    <span class="setting-label" data-i18n="setting_hide_launcher">Ocultar Launcher al jugar</span>
-                    <label class="switch">
-                        <input type="checkbox" id="hideLauncherCheck">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-
-            </div>
-
-            <div id="settings-java" class="settings-page" style="display: none;">
-                <h3 style="display:flex; align-items:center; gap: 10px; color: #fff; margin-bottom: 20px;">
-                    <i class="fas fa-coffee" style="color: #6a6a6a;"></i> <span data-i18n="setting_java">Java
-                        Runtime</span>
-                </h3>
-
-                <div class="settings-option">
-                    <span class="setting-label" data-i18n="java_custom_use">Use Custom Java Path</span>
-                    <label class="switch">
-                        <input type="checkbox" id="useCustomJavaCheck">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="settings-desc" style="margin-bottom: 20px;" data-i18n="java_custom_desc">Override bundled
-                    Java</div>
-
-                <div id="customJavaArea" class="settings-box"
-                    style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); opacity: 0.5; pointer-events: none;">
-                    <label style="display:block; color: #ccc; margin-bottom: 10px;" data-i18n="java_path_label">Java
-                        Executable Path</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="javaPathInput" class="simple-input" placeholder="Select Java path...">
-                        <button id="browseJavaBtn" class="action-btn primary-btn small-btn" style="background: #4a4a4a;"
-                            data-i18n="btn_browse">Browse</button>
+                        <div class="settings-item clickable" id="repairGameBtn">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="setting_repair">Reparar Jogo</span>
+                                <span class="settings-item-desc" data-i18n="repair_desc">Reinstalar arquivos do
+                                    jogo</span>
+                            </div>
+                            <div class="settings-item-action">
+                                <i class="fas fa-sync"></i>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- GPU Selection -->
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="setting_gpu">Preferência de GPU</span>
+                            </div>
+                            <div class="settings-gpu-buttons">
+                                <button class="gpu-btn active" data-val="auto">AUTO</button>
+                                <button class="gpu-btn" data-val="integrated">INTEGRATED</button>
+                                <button class="gpu-btn" data-val="dedicated">DEDICATED</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hide Launcher Toggle -->
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-eye-slash"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="setting_hide_launcher">Ocultar Launcher ao
+                                    jogar</span>
+                            </div>
+                            <label class="settings-toggle">
+                                <input type="checkbox" id="hideLauncherCheck">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Java -->
+                <div id="settings-java" class="settings-page">
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <i class="fas fa-coffee"></i>
+                            </div>
+                            <div class="settings-item-content">
+                                <span class="settings-item-label" data-i18n="java_custom_use">Usar Java
+                                    Personalizado</span>
+                                <span class="settings-item-desc" data-i18n="java_custom_desc">Sobrescrever o Java
+                                    incluído com a sua própria instalação</span>
+                            </div>
+                            <label class="settings-toggle">
+                                <input type="checkbox" id="useCustomJavaCheck">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customJavaArea" class="settings-group java-path-group disabled">
+                        <div class="settings-item">
+                            <div class="settings-item-content" style="flex: 1;">
+                                <span class="settings-item-label" data-i18n="java_path_label">Caminho do Java</span>
+                                <div class="java-path-input">
+                                    <input type="text" id="javaPathInput" class="settings-input"
+                                        placeholder="Selecione o caminho do Java...">
+                                    <button id="browseJavaBtn" class="java-browse-btn"
+                                        data-i18n="btn_browse">Procurar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div id="settings-profiles" class="settings-page" style="display: none;">
-                <div class="settings-option" style="flex-direction: column; align-items: flex-start;">
-                    <span class="setting-label" data-i18n="settings_profile_active">Perfil Ativo</span>
-                    <select id="profileSelect" class="settings-select" style="width: 100%; margin-top: 10px;">
-                        <option value="default" data-i18n="settings_profile_default">Padrão</option>
-                    </select>
-                </div>
-                <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <button id="createProfileBtn" class="action-btn primary-btn small-btn" style="flex: 1;"
-                        data-i18n="settings_profile_new">+ Novo</button>
-                    <button id="deleteProfileBtn" class="action-btn secondary-btn small-btn" style="flex: 1;"
-                        data-i18n="settings_profile_delete">Excluir</button>
-                </div>
-                <div class="input-group" style="margin-top: 20px;">
-                    <label data-i18n="settings_profile_name">Nome do Perfil</label>
-                    <input type="text" id="profileNameInput" class="simple-input" placeholder="Meu Perfil"
-                        data-i18n-placeholder="settings_profile_placeholder">
-                </div>
-            </div>
-
         </div>
     </div>
 
@@ -261,7 +294,7 @@
                         <div class="featured-actions">
                             <button class="action-pill" id="heroReadMore">
                                 <i class="fas fa-external-link-alt"></i>
-                                VER MAIS
+                                <span data-i18n="btn_read_more">VER MAIS</span>
                             </button>
                         </div>
                     </div>
@@ -283,8 +316,8 @@
                         <div class="channel-info">
                             <span class="channel-label" data-i18n="home_channel_label">Canal</span>
                             <select id="homeGameChannel" class="home-channel-select">
-                                <option value="latest" data-i18n="game_channel_latest">Latest</option>
-                                <option value="beta" data-i18n="game_channel_beta">Beta</option>
+                                <option value="latest" data-i18n="game_channel_legacy">Legacy</option>
+                                <option value="beta" data-i18n="game_channel_current">Current</option>
                             </select>
                         </div>
                         <div class="channel-version">
@@ -298,7 +331,7 @@
 
             <!-- News Cards na parte inferior - fora do hero -->
             <div class="news-section">
-                <span class="section-title">MAIS NOTÍCIAS</span>
+                <span class="section-title" data-i18n="news_section_title">MAIS NOTÍCIAS</span>
                 <div class="news-cards" id="newsCarousel">
                     <div class="loader-container">
                         <i class="fas fa-circle-notch fa-spin"></i>

@@ -3,7 +3,13 @@ const path = require('path');
 const fs = require('fs');
 
 let currentTranslations = {};
+const AVAILABLE_LANGS = ['en', 'es', 'pt', 'de', 'fr', 'zh', 'ru', 'ja'];
 const defaultLang = 'pt';
+
+const getSavedLang = () => {
+    const saved = localStorage.getItem('battly_lang');
+    return AVAILABLE_LANGS.includes(saved) ? saved : defaultLang;
+};
 
 const SETTINGS_CONFIG = {
     defaultGameChannel: 'latest',
@@ -231,8 +237,16 @@ const installedList = document.getElementById('installedList');
 const modSearchInput = document.getElementById('modSearchInput');
 const searchModsBtn = document.getElementById('searchModsBtn');
 
-loadLocale(defaultLang);
+loadLocale(getSavedLang());
 loadNews();
+
+const langSelect = document.getElementById('langSelect');
+if (langSelect) {
+    langSelect.value = getSavedLang();
+    langSelect.addEventListener('change', (e) => {
+        loadLocale(e.target.value);
+    });
+}
 
 const savedUser = localStorage.getItem('hytale_username');
 let originalUsername = savedUser || '';
@@ -347,18 +361,7 @@ const syncGameChannel = async () => {
 
 syncGameChannel();
 
-const settingsTabs = document.querySelectorAll('.settings-tab');
-settingsTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        settingsTabs.forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.settings-page').forEach(p => p.style.display = 'none');
-
-        tab.classList.add('active');
-        const target = tab.getAttribute('data-tab');
-        const page = document.getElementById(`settings-${target}`);
-        if (page) page.style.display = 'block';
-    });
-});
+// Handler original de settings tabs removido - movido para depois de refreshGpuButtons()
 
 let detectedGpus = { integrated: null, dedicated: null };
 
@@ -389,6 +392,39 @@ const refreshGpuButtons = () => {
     });
 };
 refreshGpuButtons();
+
+// Settings Tabs Handler
+const settingsTabs = document.querySelectorAll('.settings-tab');
+const settingsPages = document.querySelectorAll('.settings-page');
+
+settingsTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        const targetTab = tab.getAttribute('data-tab');
+
+        settingsTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        settingsPages.forEach(page => {
+            page.classList.remove('active');
+            if (page.id === `settings-${targetTab}`) {
+                page.classList.add('active');
+            }
+        });
+    });
+});
+
+// Java custom area toggle
+if (useCustomJavaCheck) {
+    useCustomJavaCheck.addEventListener('change', () => {
+        if (customJavaArea) {
+            if (useCustomJavaCheck.checked) {
+                customJavaArea.classList.remove('disabled');
+            } else {
+                customJavaArea.classList.add('disabled');
+            }
+        }
+    });
+}
 
 if (openLocationBtn) {
     openLocationBtn.addEventListener('click', () => {
@@ -539,7 +575,7 @@ playBtn.addEventListener('click', () => {
 
     if (!username) {
         shakeElement(usernameInput);
-        statusMsg.textContent = t('status_error') + " Nome obrigatório";
+        statusMsg.textContent = t('status_error') + ' ' + t('error_name_required');
         statusMsg.style.color = "#ff4444";
         return;
     }
@@ -547,13 +583,13 @@ playBtn.addEventListener('click', () => {
     localStorage.setItem('hytale_username', username);
 
     // Feedback Visual
-    logActivity('Iniciando Launcher...', 'loading');
+    logActivity(t('status_launching'), 'loading');
 
     // Atualiza estado do botão
     playBtn.disabled = true;
     playBtn.style.opacity = "0.7";
     playBtn.querySelector('i')?.remove(); // Remove ícones anteriores se houver
-    playBtn.textContent = 'EXECUTANDO...'; // Texto mais limpo no botão
+    playBtn.textContent = t('status_running_btn'); // Texto mais limpo no botão
 
     ipcRenderer.send('launch-game', username);
 });
@@ -567,13 +603,13 @@ ipcRenderer.on('launch-success', (event, message) => {
         playBtn.style.opacity = "1";
         playBtn.textContent = t('play_btn'); // "JOGAR"
 
-        logActivity('Sessão de jogo finalizada', 'normal');
+        logActivity(t('status_session_ended'), 'normal');
         return;
     }
 
     // Outros casos de sucesso (ex: "Juego iniciado")
     if (message === 'Juego iniciado') {
-        logActivity('Jogo iniciado com sucesso!', 'success');
+        logActivity(t('status_game_started'), 'success');
         // Oculta status de carregamento na barra de atividades se quiser, 
         // ou mantém até o jogo fechar.
     }
@@ -584,7 +620,7 @@ ipcRenderer.on('launch-error', (event, message) => {
     playBtn.style.opacity = "1";
     playBtn.textContent = t('play_btn');
 
-    logActivity(`Erro: ${message}`, 'error');
+    logActivity(`${t('status_error')} ${message}`, 'error');
 });
 
 ipcRenderer.on('launch-status', (event, message) => {
@@ -1285,32 +1321,3 @@ function showCustomDialog(title, message, isQuestion = false) {
 }
 
 window.customAsk = (title, message) => showCustomDialog(title, message, true);
-
-// Translation System
-async function loadLocale(lang) {
-    try {
-        const localeData = await fs.readFileSync(path.join(__dirname, 'locales', `${lang}.json`));
-        currentTranslations = JSON.parse(localeData);
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (currentTranslations[key]) {
-                el.innerText = currentTranslations[key];
-            }
-        });
-        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-            const key = el.getAttribute('data-i18n-placeholder');
-            if (currentTranslations[key]) {
-                el.placeholder = currentTranslations[key];
-            }
-        });
-    } catch (e) {
-        console.error("Error loading locale:", e);
-    }
-}
-
-function t(key) {
-    return currentTranslations[key] || key;
-}
-
-// Initial Load
-loadLocale(defaultLang);

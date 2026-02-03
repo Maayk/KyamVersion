@@ -51,6 +51,12 @@
     "setting_game_channel_desc": "Select installed version",
     "home_channel_label": "Kanal",
     "home_version_label": "Version",
-    "game_channel_latest": "Latest",
-    "game_channel_beta": "Beta"
+    "game_channel_legacy": "Legacy",
+    "game_channel_current": "Aktuell",
+    "btn_read_more": "MEHR LESEN",
+    "news_section_title": "MEHR NACHRICHTEN",
+    "error_name_required": "Name erforderlich",
+    "status_running_btn": "LÄUFT...",
+    "status_session_ended": "Spielsitzung beendet",
+    "status_game_started": "Spiel erfolgreich gestartet!"
 }
