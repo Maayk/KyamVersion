@@ -1,6 +1,7 @@
 # KyamTale Launcher
 
-Fork modificado do [Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale) com foco em privacidade, compatibilidade com versões recentes do client e interface customizada.
+O **KyamTale Launcher** é um fork do [Battly Launcher for Hytale](https://github.com/1ly4s0/Battly4Hytale), desenvolvido originalmente por [1ly4s0](https://github.com/1ly4s0). Este projeto foca em privacidade, compatibilidade com versões recentes do client e uma interface customizada, é apenas um trabalho temporario e não será mantido futuramente.
+
 
 ![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-blue) ![Plataforma](https://img.shields.io/badge/Plataforma-Windows-lightgrey) ![Node](https://img.shields.io/badge/Node-20+-green)
 
@@ -167,9 +168,20 @@ O canal Beta depende de arquivos base que são configurados durante a instalaç�
 
 ---
 
-## Créditos
+## Créditos e Atribuições
 
-- Projeto base: [1ly4s0/Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale)
+Este launcher não existiria sem o trabalho fundamental da comunidade e desenvolvedores originais:
+
+### Autor Original
+- **Ilyas (1ly4s0)** - Desenvolvedor principal do [1ly4s0](https://github.com/1ly4s0).
+- Projeto Base: [github.com/1ly4s0/Battly4Hytale](https://github.com/1ly4s0/Battly4Hytale)
+
+### Contribuições deste Fork
+- Refatoração de segurança (Sandboxing/IPC).
+- Remoção total de telemetria.
+- Tradução para múltiplos novos idiomas.
+- Gerenciamento automático de JRE.
+
 
 ---
 
